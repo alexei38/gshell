@@ -4,26 +4,28 @@
 import os
 import gtk
 import vte
+import pango
 import signal
 import gobject
+from config import Config
 from itertools import groupby
 from collections import OrderedDict
 from editablelabel import EditableLabel
 from thread import start_new_thread
 from time import sleep
 
-"""
-   Нужно регистрировать и удалять терминалы, аналогично как в teminatorlib
-   Убедиться что после выхода из терминала (через кнопку или exit) - закрывается pid процесса
-"""
 
 class GshellTerm(vte.Terminal):
 
     def __init__(self, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
         self.pid = None
-        self.reconfigure()
+        self.config = Config()
         self.show_all()
+        if not hasattr(self, "set_opacity") or not hasattr(self, "is_composited"):
+            self.composite_support = False
+        else:
+            self.composite_support = True
 
     def spawn_child(self, command=None):
         if not command:
@@ -38,8 +40,6 @@ class GshellTerm(vte.Terminal):
         except Exception, ex:
             print 'GshellTerm::close failed: %s' % ex
 
-    def reconfigure(self):
-        pass
 
 class GshellTabLabel(gtk.HBox):
 
@@ -105,24 +105,26 @@ class GshellNoteBook(gtk.Notebook):
         self.set_tab_pos(gtk.POS_TOP)
         self.set_scrollable(True)
         self.set_show_tabs(True)
+        self.config = Config()
         self.show_all()
-        self.page_term = None
 
     def add_tab(self, title=None, command=None):
         print 'GshellNoteBook::add_tab called'
         if not title:
             title = 'Unnamed'
 
-        label = GshellTabLabel(title, self)
-        label.connect('close-clicked', self.close_tab)
+        self.label = GshellTabLabel(title, self)
+        self.label.connect('close-clicked', self.close_tab)
 
         self.terminal = GshellTerm()
         self.terminal.spawn_child(command)
         self.terminal.connect('child-exited', self.on_terminal_exit)
+
         print "PID Terminal: %s" % self.terminal.pid
         self.page_term = self.append_page(self.terminal)
-        self.set_tab_label(self.terminal, label)
+        self.set_tab_label(self.terminal, self.label)
         self.set_page(self.page_term)
+        self.reconfigure()
         self.show_all()
 
     def close_tab(self, widget, label):
@@ -144,11 +146,118 @@ class GshellNoteBook(gtk.Notebook):
         pagepos = self.page_num(widget)
         self.remove_page(pagepos)
 
+    def reconfigure(self):
+        if hasattr(self.terminal, 'set_alternate_screen_scroll'):
+            self.terminal.set_alternate_screen_scroll(self.config['alternate_screen_scroll'])
+        if self.config['copy_on_selection']:
+            self.terminal.connect('selection-changed', lambda widget: self.terminal.copy_clipboard())
+        self.terminal.set_emulation(self.config['emulation'])
+        self.terminal.set_encoding(self.config['encoding'])
+        self.terminal.set_word_chars(self.config['word_chars'])
+        self.terminal.set_mouse_autohide(self.config['mouse_autohide'])
+        if self.config['use_system_font'] == True:
+            font = self.config.get_system_font()
+        else:
+            font = self.config['font']
+        self.terminal.set_font(pango.FontDescription(font))
+        self.terminal.set_allow_bold(self.config['allow_bold'])
+        if self.config['use_theme_colors']:
+            self.fgcolor_active = self.terminal.get_style().text[gtk.STATE_NORMAL]
+            self.bgcolor = self.terminal.get_style().base[gtk.STATE_NORMAL]
+        else:
+            self.fgcolor_active = gtk.gdk.color_parse(self.config['foreground_color'])
+            self.bgcolor = gtk.gdk.color_parse(self.config['background_color'])
+
+        factor = self.config['inactive_color_offset']
+        if factor > 1.0:
+          factor = 1.0
+        self.fgcolor_inactive = self.fgcolor_active.copy()
+
+        for bit in ['red', 'green', 'blue']:
+            setattr(self.fgcolor_inactive, bit,
+                    getattr(self.fgcolor_inactive, bit) * factor)
+
+        colors = self.config['palette'].split(':')
+        self.palette_active = []
+        self.palette_inactive = []
+        for color in colors:
+            if color:
+                newcolor = gtk.gdk.color_parse(color)
+                newcolor_inactive = newcolor.copy()
+                for bit in ['red', 'green', 'blue']:
+                    setattr(newcolor_inactive, bit, getattr(newcolor_inactive, bit) * factor)
+                self.palette_active.append(newcolor)
+                self.palette_inactive.append(newcolor_inactive)
+        self.terminal.set_colors(self.fgcolor_active, self.bgcolor, self.palette_active)
+        if hasattr(self.terminal, 'set_cursor_shape'):
+            self.terminal.set_cursor_shape(getattr(vte, 'CURSOR_SHAPE_%s' % self.config['cursor_shape'].upper()))
+
+        background_type = self.config['background_type']
+        if background_type == 'image' and self.config['background_image'] is not None and self.config['background_image'] != '':
+            self.terminal.set_background_image_file(self.config['background_image'])
+            self.terminal.set_scroll_background(self.config['scroll_background'])
+        else:
+            try:
+                self.terminal.set_background_image(None)
+            except TypeError:
+                pass
+            self.terminal.set_scroll_background(False)
+
+        if background_type in ('image', 'transparent'):
+            self.terminal.set_background_tint_color(gtk.gdk.color_parse(
+                                               self.config['background_color']))
+            opacity = int(self.config['background_darkness'] * 65536)
+            saturation = 1.0 - float(self.config['background_darkness'])
+            self.terminal.set_background_saturation(saturation)
+        else:
+            opacity = 65535
+            self.terminal.set_background_saturation(1)
+
+        if self.terminal.composite_support:
+            self.terminal.set_opacity(opacity)
+
+        # This is quite hairy, but the basic explanation is that we should
+        # set_background_transparent(True) when we have no compositing and want
+        # fake background transparency, otherwise it should be False.
+        if not self.terminal.composite_support or self.config['disable_real_transparency']:
+            # We have no compositing support, fake background only
+            background_transparent = True
+        else:
+            if self.terminal.is_composited() == False:
+                # We have compositing and it's enabled. no fake background.
+                background_transparent = True
+            else:
+                # We have compositing, but it's not enabled. fake background
+                background_transparent = False
+        if self.config['background_type'] == 'transparent':
+            self.terminal.set_background_transparent(background_transparent)
+        else:
+            self.terminal.set_background_transparent(False)
+
+        if hasattr(vte, 'VVVVTE_CURSOR_BLINK_ON'):
+            if self.config['cursor_blink'] == True:
+                self.terminal.set_cursor_blink_mode('VTE_CURSOR_BLINK_ON')
+            else:
+                self.terminal.set_cursor_blink_mode('VTE_CURSOR_BLINK_OFF')
+        else:
+            self.terminal.set_cursor_blinks(self.config['cursor_blink'])
+
+        if self.config['scrollback_infinite'] == True:
+            scrollback_lines = -1
+        else:
+            scrollback_lines = self.config['scrollback_lines']
+        self.terminal.set_scrollback_lines(scrollback_lines)
+        self.terminal.set_scroll_on_keystroke(self.config['scroll_on_keystroke'])
+        self.terminal.set_scroll_on_output(self.config['scroll_on_output'])
+        self.terminal.queue_draw()
+
 
 class MainWindow(object):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        gtk_settings = gtk.settings_get_default()
+        gtk_settings.props.gtk_menu_bar_accel = None
 
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
