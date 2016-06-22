@@ -1,59 +1,148 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import gtk
 import vte
+import signal
+import gobject
 from itertools import groupby
 from collections import OrderedDict
-import os
+from editablelabel import EditableLabel
+from thread import start_new_thread
+from time import sleep
+
+"""
+   Нужно регистрировать и удалять терминалы, аналогично как в teminatorlib
+   Убедиться что после выхода из терминала (через кнопку или exit) - закрывается pid процесса
+"""
 
 class GshellTerm(vte.Terminal):
 
     def __init__(self, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
-        self.fork_command()
+        self.pid = None
+        self.reconfigure()
+        self.show_all()
 
+    def spawn_child(self, command=None):
+        if not command:
+            command = os.getenv('SHELL')
+        self.pid = self.fork_command(command=command, directory=os.getenv('HOME'))
 
-class CloseTabButton(gtk.Button):
+    def close(self):
+        print 'GshellTerm::close called'
+        print 'GshellTerm::close pid %d' % self.pid
+        try:
+            os.kill(self.pid, signal.SIGHUP)
+        except Exception, ex:
+            print 'GshellTerm::close failed: %s' % ex
 
-    def __init__(self, widget, *args, **kwds):
-        super(CloseTabButton, self).__init__(label='x', *args, **kwds)
-        self.set_relief(gtk.RELIEF_NONE)
-        image_w, image_h = gtk.icon_size_lookup(gtk.ICON_SIZE_MENU)
-        self.set_size_request(image_w+7, image_h+6)
-        self.widget_ref = widget
-        self.connect('destroy', self.on_destroy)
+    def reconfigure(self):
+        pass
 
-    def on_destroy(self, widget):
-        self.widget_ref = None
+class GshellTabLabel(gtk.HBox):
+
+    __gsignals__ = {
+            'close-clicked': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                (gobject.TYPE_OBJECT,)),
+    }
+
+    def __init__(self, title, notebook):
+        gtk.HBox.__init__(self)
+        self.notebook = notebook
+        self.label = EditableLabel(title)
+        self.update_angle()
+        self.pack_start(self.label, True, True)
+        self.update_button()
+        self.show_all()
+
+    def update_button(self):
+        self.button = gtk.Button()
+        self.icon = gtk.Image()
+        self.icon.set_from_stock(gtk.STOCK_CLOSE,
+                                 gtk.ICON_SIZE_MENU)
+        self.button.set_focus_on_click(False)
+        self.button.set_relief(gtk.RELIEF_NONE)
+        style = gtk.RcStyle()
+        style.xthickness = 0
+        style.ythickness = 0
+        self.button.modify_style(style)
+        self.button.add(self.icon)
+        self.button.connect('clicked', self.on_close)
+        self.button.set_name('tab-close-button')
+        if hasattr(self.button, 'set_tooltip_text'):
+            self.button.set_tooltip_text('Close Tab')
+        self.pack_start(self.button, False, False)
+        self.show_all()
+
+    def update_angle(self):
+        """Update the angle of a label"""
+        position = self.notebook.get_tab_pos()
+        if position == gtk.POS_LEFT:
+            if hasattr(self, 'set_orientation'):
+                self.set_orientation(gtk.ORIENTATION_VERTICAL)
+            self.label.set_angle(90)
+        elif position == gtk.POS_RIGHT:
+            if hasattr(self, 'set_orientation'):
+                self.set_orientation(gtk.ORIENTATION_VERTICAL)
+            self.label.set_angle(270)
+        else:
+            if hasattr(self, 'set_orientation'):
+                self.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+            self.label.set_angle(0)
+
+    def on_close(self, widget, data=None):
+        print 'GshellTabLabel::on_close called'
+        self.emit('close-clicked', self)
 
 
 class GshellNoteBook(gtk.Notebook):
 
-    def __init__(self, *args, **kwds):
-        super(GshellNoteBook, self).__init__(*args, **kwds)
+    def __init__(self, widget):
+        gtk.Notebook.__init__(self)
+        self.widget = widget
         self.set_tab_pos(gtk.POS_TOP)
-        self.set_show_tabs = True
-        self.set_show_border = True
-        self.set_scrollable = True
+        self.set_scrollable(True)
+        self.set_show_tabs(True)
+        self.show_all()
+        self.page_term = None
 
-    def add_tab(self, widget, title):
-        tab = gtk.HBox()
-        tab_label = gtk.Label("Tab")
-        tab_label.show()
-        tab.pack_start(tab_label)
-        tab_close = CloseTabButton(widget)
-        tab_close.connect('clicked', self.destroy_tab )
-        tab_close.show()
-        tab.pack_end( tab_close)
-        tab.show()
-        self.append_page(widget, tab)
+    def add_tab(self, title=None, command=None):
+        print 'GshellNoteBook::add_tab called'
+        if not title:
+            title = 'Unnamed'
 
+        label = GshellTabLabel(title, self)
+        label.connect('close-clicked', self.close_tab)
 
-    def destroy_tab(self, widget, data=None):
-        page_num = self.page_num( widget.widget_ref )
-        self.remove_page(page_num)
-        widget.destroy()
+        self.terminal = GshellTerm()
+        self.terminal.spawn_child(command)
+        self.terminal.connect('child-exited', self.on_terminal_exit)
+        print "PID Terminal: %s" % self.terminal.pid
+        self.page_term = self.append_page(self.terminal)
+        self.set_tab_label(self.terminal, label)
+        self.set_page(self.page_term)
+        self.show_all()
+
+    def close_tab(self, widget, label):
+        print 'GshellNoteBook::close_tab called'
+        tabnum = None
+        nb = widget.notebook
+        for i in xrange(0, nb.get_n_pages() + 1):
+            if label == nb.get_tab_label(nb.get_nth_page(i)):
+                tabnum = i
+                break
+        child = nb.get_nth_page(tabnum)
+        if isinstance(child, vte.Terminal):
+            child.close()
+            del(label)
+        nb.remove_page(tabnum)
+
+    def on_terminal_exit(self, widget, data=None):
+        print 'GshellNoteBook::on_terminal_exit called'
+        pagepos = self.page_num(widget)
+        self.remove_page(pagepos)
 
 
 class MainWindow(object):
@@ -67,7 +156,6 @@ class MainWindow(object):
         self.window.set_title("Gshell")
         self.window.set_position(gtk.WIN_POS_CENTER)
         self.window.connect("delete_event", self.main_window_destroy)
-        self.terminal = GshellTerm()
         self.vbox_main = gtk.VBox()
         self.window.add(self.vbox_main)
 
@@ -98,11 +186,12 @@ class MainWindow(object):
         toolbar_conn.append_item("Connect", "Connect", "Connect", icon_disconnect, self.menuitem_response)
         self.vbox_main.pack_start(toolbar_conn, False, False, 0)
 
+
         """
         Notebook
         """
-        self.notebook = GshellNoteBook()
-        self.notebook.add_tab(self.terminal, 'Term1')
+        self.notebook = GshellNoteBook(self.vbox_main)
+        self.notebook.add_tab(title='Local')
         self.vbox_main.pack_start(self.notebook, True, True, 0)
 
         #self.statusbar = gtk.Statusbar()
@@ -112,8 +201,11 @@ class MainWindow(object):
     def main_window_destroy(self, *args):
         gtk.main_quit(*args)
 
-    def menuitem_response(self, widget, string=None):
+    def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
+
+    def on_new_terminal(self, widget, data=None):
+        self.notebook.add_tab(title='Local')
 
     def build_toolbar(self):
         toolbar = gtk.Toolbar()
@@ -122,7 +214,7 @@ class MainWindow(object):
 
         icon_new = gtk.Image()
         icon_new.set_from_stock(gtk.STOCK_NEW, 4)
-        toolbar.append_item("New", "New", "New", icon_new, self.menuitem_response)
+        toolbar.append_item("New", "New", "New", icon_new, self.on_new_terminal)
 
         icon_open = gtk.Image()
         icon_open.set_from_stock(gtk.STOCK_OPEN, 4)
