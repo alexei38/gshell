@@ -85,8 +85,7 @@ class GshellTerm(vte.Terminal):
 class GshellTabLabel(gtk.HBox):
 
     __gsignals__ = {
-            'close-clicked': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
-                (gobject.TYPE_OBJECT,)),
+        'close-clicked': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,(gobject.TYPE_OBJECT,)),
     }
 
     def __init__(self, title, notebook):
@@ -363,20 +362,21 @@ class GshellKeyBinder(object):
         self.load_accelerators()
 
     def load_accelerators(self):
-        gets = lambda x: self.keybinder.get(x)
-        key, mask = gtk.accelerator_parse(gets('zoom_in'))
-        print 'zoom_in'
-        print key, mask
-        if key > 0:
-            self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE,
-                                           self.main.key_zoom_in)
-        key, mask = gtk.accelerator_parse(gets('zoom_out'))
-        print 'zoom_out'
-        print key, mask
-        if key > 0:
-            self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE,
-                                           self.main.key_zoom_out)
-
+        for action, keys in self.keybinder.iteritems():
+            param = None
+            if isinstance(action, tuple):
+                action, param = action
+            if not isinstance(keys, list):
+                keys = [keys]
+            for key in keys:
+                g_key, mask = gtk.accelerator_parse(key)
+                if g_key > 0:
+                    if hasattr(self.main, action):
+                        if param:
+                            func = getattr(self.main, action)(param)
+                        else:
+                            func = getattr(self.main, action)
+                        self.accel_group.connect_group(g_key, mask, gtk.ACCEL_VISIBLE, func)
 
 class MainWindow(object):
 
@@ -387,10 +387,12 @@ class MainWindow(object):
 
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window.set_full_screen = False
         self.window.set_size_request(1200, 860)
         self.window.set_title("Gshell")
         self.window.set_position(gtk.WIN_POS_CENTER)
         self.window.connect("delete_event", self.main_window_destroy)
+        self.window.connect("key-press-event",self._key_press_event)
         self.vbox_main = gtk.VBox()
         self.window.add(self.vbox_main)
 
@@ -409,30 +411,41 @@ class MainWindow(object):
         """
            Connection String
         """
-        toolbar_conn = gtk.Toolbar()
-        toolbar_conn.set_orientation(gtk.ORIENTATION_HORIZONTAL)
-        toolbar_conn.set_style(gtk.TOOLBAR_ICONS)
+        self.toolbar_conn = gtk.Toolbar()
+        self.toolbar_conn.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        self.toolbar_conn.set_style(gtk.TOOLBAR_ICONS)
         self.conn_string = gtk.Entry()
         self.conn_string.set_size_request(350, 25)
         self.conn_string.set_editable(True)
-        icon_disconnect = gtk.Image()
-        icon_disconnect.set_from_stock(gtk.STOCK_CONNECT, 4)
-        toolbar_conn.append_widget(self.conn_string, None, None)
-        toolbar_conn.append_item("Connect", "Connect", "Connect", icon_disconnect, self.menuitem_response)
-        self.vbox_main.pack_start(toolbar_conn, False, False, 0)
+        icon_connect = gtk.Image()
+        icon_connect.set_from_stock(gtk.STOCK_CONNECT, 4)
+        self.toolbar_conn.append_widget(self.conn_string, None, None)
+        self.toolbar_conn.append_item("Connect", "Connect", "Connect", icon_connect, self.menuitem_response)
+        self.vbox_main.pack_start(self.toolbar_conn, False, False, 0)
 
 
         """
         Notebook
         """
         self.notebook = GshellNoteBook(self.vbox_main)
-        self.notebook.add_tab()
         self.vbox_main.pack_start(self.notebook, True, True, 0)
 
         #self.statusbar = gtk.Statusbar()
         #self.vbox_main.pack_start(self.statusbar, True, True, 0)
-        self.window.show_all()
         keybinder = GshellKeyBinder(self)
+        self.notebook.add_tab()
+        self.window.show_all()
+
+
+    def _key_press_event(self, widget, event):
+        keyval = event.keyval
+        keyval_name = gtk.gdk.keyval_name(keyval)
+        state = event.state
+        ctrl = (state & gtk.gdk.CONTROL_MASK)
+        shift = (state & gtk.gdk.SHIFT_MASK)
+        print 'State %s' % state
+        print 'Keyval %s' % keyval_name
+        return False
 
     def main_window_destroy(self, *args):
         gtk.main_quit(*args)
@@ -467,19 +480,49 @@ class MainWindow(object):
             terminal.close()
 
     def menu_zoom_tab(self, widget, data=None):
-        print 'MENU Zoom called'
-        print data
-        print widget
         terminal = self.notebook.get_current_terminal()
         if hasattr(terminal, data):
             func = getattr(terminal, data)
             func()
 
-    def key_zoom_in(self, *args):
-        self.menu_zoom_tab(self, 'zoom_in')
+    def key_zoom(self, zoom):
+        def callback(*args):
+            self.menu_zoom_tab(self, zoom)
+            return True
+        return callback
 
-    def key_zoom_out(self, *args):
-        self.menu_zoom_tab(self, 'zoom_out')
+    def key_close_term(self, *args):
+        terminal = self.notebook.get_current_terminal()
+        terminal.close()
+        return True
+
+    def key_new_tab(self, *args):
+        self.notebook.add_tab()
+        return True
+
+    def key_full_screen(self, *args):
+        self.window.set_full_screen = not self.window.set_full_screen
+        if self.window.set_full_screen:
+            self.window.fullscreen()
+        else:
+            self.window.unfullscreen()
+        return True
+
+    def key_next_tab(self, *args):
+        self.notebook.next_page()
+        return True
+
+    def key_prev_tab(self, *args):
+        self.notebook.prev_page()
+        return True
+
+    def key_copy(self, *args):
+        self.menu_copy(self)
+        return True
+
+    def key_paste(self, *args):
+        self.menu_paste(self)
+        return True
 
     def on_new_terminal(self, widget, data=None):
         self.notebook.add_tab()

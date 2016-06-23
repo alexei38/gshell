@@ -27,23 +27,21 @@ DEFAULTS = {
     'use_system_font'       : True,
     'use_theme_colors'      : False,
     'encoding'              : 'UTF-8',
-    'copy_on_selection'     : True,
+    'copy_on_selection'     : False,
     'alternate_screen_scroll': True,
     'inactive_color_offset': 0.8,
     'disable_real_transparency' : True,
     'keybinder': {
-        'zoom_in'          : '<Shift><Control>plus',
-        'zoom_out'         : '<Shift><Control>minus',
-        'zoom_normal'      : '<Shift><Control>0',
-        'close_term'       : '<Shift><Control>w',
-        'copy'             : '<Shift><Control>c',
-        'paste'            : '<Shift><Control>v',
-        'new_tab'          : '<Shift><Control>t',
-        'next_tab'         : '<Control>Page_Down',
-        'prev_tab'         : '<Control>Page_Up',
-        'full_screen'      : 'F11',
-        'reset'            : '<Shift><Control>r',
-        'reset_clear'      : '<Shift><Control>g',
+        ('key_zoom', 'zoom_in')     : ['<Control>equal', '<Control>KP_Add'],
+        ('key_zoom', 'zoom_out')    : ['<Control>minus', '<Control>KP_Subtract'],
+        ('key_zoom', 'zoom_orig')   : ['<Control>KP_0', '<Control>0'],
+        'key_close_term'            : '<Shift><Control>w',
+        'key_copy'                  : '<Shift><Control>c',
+        'key_paste'                 : '<Shift><Control>v',
+        'key_new_tab'               : '<Shift><Control>t',
+        'key_next_tab'              : '<Control>Page_Down',
+        'key_prev_tab'              : '<Control>Page_Up',
+        'key_full_screen'           : 'F11',
     }
 }
 
@@ -56,7 +54,7 @@ class Config(object):
 
     def __getitem__(self, key):
         """Look up a configuration item"""
-        DEFAULTS.get(key)
+        return DEFAULTS.get(key)
 
     def get_system_font(self):
         """Look up the system font"""
