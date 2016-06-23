@@ -22,10 +22,7 @@ class GshellTerm(vte.Terminal):
         self.pid = None
         self.config = Config()
         self.show_all()
-        if not hasattr(self, "set_opacity") or not hasattr(self, "is_composited"):
-            self.composite_support = False
-        else:
-            self.composite_support = True
+        self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
 
     def spawn_child(self, command=None):
         if not command:
@@ -39,6 +36,52 @@ class GshellTerm(vte.Terminal):
             os.kill(self.pid, signal.SIGHUP)
         except Exception, ex:
             print 'GshellTerm::close failed: %s' % ex
+
+    def zoom_in(self):
+        print 'GshellTerm::zoom_in called'
+        self.zoom_font(True)
+
+    def zoom_out(self):
+        print 'GshellTerm::zoom_out called'
+        self.zoom_font(False)
+
+    def zoom_orig(self):
+        print 'GshellTerm::zoom_orig called'
+        if self.config['use_system_font'] == True:
+            font = self.config.get_system_font()
+        else:
+            font = self.config['font']
+        self.set_font(pango.FontDescription(font))
+        self.custom_font_size = None
+
+    def zoom_font(self, zoom_in):
+        print 'GshellTerm::zoom_font called'
+        pangodesc = self.get_font()
+        fontsize = pangodesc.get_size()
+
+        if fontsize > pango.SCALE and not zoom_in:
+            fontsize -= pango.SCALE
+        elif zoom_in:
+            fontsize += pango.SCALE
+
+        pangodesc.set_size(fontsize)
+        self.set_font(pangodesc)
+        self.custom_font_size = fontsize
+
+    def set_font(self, fontdesc):
+        """Set the font we want in VTE"""
+        antialias = True
+        if antialias:
+            try:
+                antialias = vte.ANTI_ALIAS_FORCE_ENABLE
+            except AttributeError:
+                antialias = 1
+        else:
+            try:
+                antialias = vte.ANTI_ALIAS_FORCE_DISABLE
+            except AttributeError:
+                antialias = 2
+        self.set_font_full(fontdesc, antialias)
 
 
 class GshellTabLabel(gtk.HBox):
@@ -60,8 +103,7 @@ class GshellTabLabel(gtk.HBox):
     def update_button(self):
         self.button = gtk.Button()
         self.icon = gtk.Image()
-        self.icon.set_from_stock(gtk.STOCK_CLOSE,
-                                 gtk.ICON_SIZE_MENU)
+        self.icon.set_from_stock(gtk.STOCK_CLOSE, gtk.ICON_SIZE_MENU)
         self.button.set_focus_on_click(False)
         self.button.set_relief(gtk.RELIEF_NONE)
         style = gtk.RcStyle()
@@ -110,43 +152,99 @@ class GshellNoteBook(gtk.Notebook):
 
     def add_tab(self, title=None, command=None):
         print 'GshellNoteBook::add_tab called'
-        if not title:
-            title = 'Unnamed'
-
-        self.label = GshellTabLabel(title, self)
-        self.label.connect('close-clicked', self.close_tab)
-
         self.terminal = GshellTerm()
         self.terminal.spawn_child(command)
-        self.terminal.connect('child-exited', self.on_terminal_exit)
-
+        self.terminalbox = self.create_terminalbox()
         print "PID Terminal: %s" % self.terminal.pid
-        self.page_term = self.append_page(self.terminal)
-        self.set_tab_label(self.terminal, self.label)
+        self.page_term = self.append_page(self.terminalbox)
+        if not title and not command:
+            title = 'Local%s' % (int(self.page_term) + 1)
+        self.label = GshellTabLabel(title + ' ', self)
+
+        self.label.connect('close-clicked', self.close_tab)
+        self.terminal.connect('child-exited', self.on_terminal_exit, self.terminalbox)
+        self.set_tab_label(self.terminalbox, self.label)
         self.set_page(self.page_term)
         self.reconfigure()
         self.show_all()
+        self.terminal.grab_focus()
 
     def close_tab(self, widget, label):
         print 'GshellNoteBook::close_tab called'
-        tabnum = None
-        nb = widget.notebook
-        for i in xrange(0, nb.get_n_pages() + 1):
-            if label == nb.get_tab_label(nb.get_nth_page(i)):
+        tabnum = -1
+        for i in xrange(0, self.get_n_pages() + 1):
+            if label == self.get_tab_label(self.get_nth_page(i)):
                 tabnum = i
                 break
-        child = nb.get_nth_page(tabnum)
-        if isinstance(child, vte.Terminal):
-            child.close()
+        if tabnum != -1:
+            term = self.get_terminal_by_page(tabnum)
+            if term:
+                term.close()
             del(label)
-        nb.remove_page(tabnum)
+            self.remove_page(tabnum)
 
-    def on_terminal_exit(self, widget, data=None):
+    def get_terminal_by_page(self, tabnum):
+        print 'GshellNoteBook::get_terminal_by_page called'
+        tab_parent = self.get_nth_page(tabnum)
+        if isinstance(tab_parent, gtk.HBox):
+            for child in tab_parent.get_children():
+                if isinstance(child, vte.Terminal):
+                    return child
+        return None
+
+    def get_current_terminal(self):
+        print 'GshellNoteBook::get_current_terminal called'
+        current_page = self.get_current_page()
+        return self.get_terminal_by_page(current_page)
+
+    def get_all_terminals(self, exclude_current_page=False):
+        print 'GshellNoteBook::get_all_terminals called'
+        terminals = []
+        current_page = self.get_current_page()
+        for i in xrange(0, self.get_n_pages() + 1):
+            if i == current_page and exclude_current_page:
+                continue
+            term = self.get_terminal_by_page(i)
+            if term:
+                terminals.append(term)
+        return terminals
+
+    def on_terminal_exit(self, widget, terminalbox):
         print 'GshellNoteBook::on_terminal_exit called'
-        pagepos = self.page_num(widget)
-        self.remove_page(pagepos)
+        pagepos = self.page_num(terminalbox)
+        if pagepos != -1:
+            self.remove_page(pagepos)
+
+    def create_terminalbox(self):
+        print 'GshellNoteBook::create_terminalbox called'
+        terminalbox = gtk.HBox()
+        self.scrollbar = gtk.VScrollbar(self.terminal.get_adjustment())
+        self.scrollbar.set_no_show_all(True)
+        self.scrollbar_position = self.config['scrollbar_position']
+        if self.scrollbar_position not in ('hidden', 'disabled'):
+            self.scrollbar.show()
+
+        if self.scrollbar_position == 'left':
+            func = terminalbox.pack_end
+        else:
+            func = terminalbox.pack_start
+        func(self.terminal)
+        func(self.scrollbar, False)
+        terminalbox.show_all()
+        return terminalbox
+
+    def on_terminal_focus_in(self, _widget, _event):
+        print 'GshellNoteBook::on_terminal_focus_in called'
+        self.terminal.set_colors(self.fgcolor_active, self.bgcolor,
+                            self.palette_active)
+
+    def on_terminal_focus_out(self, _widget, _event):
+        print 'GshellNoteBook::on_terminal_focus_out called'
+        self.terminal.set_colors(self.fgcolor_inactive, self.bgcolor,
+                            self.palette_inactive)
 
     def reconfigure(self):
+        print 'GshellNoteBook::reconfigure called'
         if hasattr(self.terminal, 'set_alternate_screen_scroll'):
             self.terminal.set_alternate_screen_scroll(self.config['alternate_screen_scroll'])
         if self.config['copy_on_selection']:
@@ -215,19 +313,12 @@ class GshellNoteBook(gtk.Notebook):
 
         if self.terminal.composite_support:
             self.terminal.set_opacity(opacity)
-
-        # This is quite hairy, but the basic explanation is that we should
-        # set_background_transparent(True) when we have no compositing and want
-        # fake background transparency, otherwise it should be False.
         if not self.terminal.composite_support or self.config['disable_real_transparency']:
-            # We have no compositing support, fake background only
             background_transparent = True
         else:
             if self.terminal.is_composited() == False:
-                # We have compositing and it's enabled. no fake background.
                 background_transparent = True
             else:
-                # We have compositing, but it's not enabled. fake background
                 background_transparent = False
         if self.config['background_type'] == 'transparent':
             self.terminal.set_background_transparent(background_transparent)
@@ -249,7 +340,44 @@ class GshellNoteBook(gtk.Notebook):
         self.terminal.set_scrollback_lines(scrollback_lines)
         self.terminal.set_scroll_on_keystroke(self.config['scroll_on_keystroke'])
         self.terminal.set_scroll_on_output(self.config['scroll_on_output'])
+
+        self.terminal.connect('focus-in-event', self.on_terminal_focus_in)
+        self.terminal.connect('focus-out-event', self.on_terminal_focus_out)
+
         self.terminal.queue_draw()
+
+class GshellKeyBinder(object):
+
+    def __init__(self, main):
+        super(GshellKeyBinder, self).__init__()
+        self.main = main
+        self.window = self.main.window
+        self.config = Config()
+        self.keybinder = self.config['keybinder']
+        self.accel_group = None
+        self.reload_accelerators()
+
+    def reload_accelerators(self):
+        if self.accel_group:
+            self.window.remove_accel_group(self.accel_group)
+        self.accel_group = gtk.AccelGroup()
+        self.window.add_accel_group(self.accel_group)
+        self.load_accelerators()
+
+    def load_accelerators(self):
+        gets = lambda x: self.keybinder.get(x)
+        key, mask = gtk.accelerator_parse(gets('zoom_in'))
+        print 'zoom_in'
+        print key, mask
+        if key > 0:
+            self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE,
+                                           self.main.key_zoom_in)
+        key, mask = gtk.accelerator_parse(gets('zoom_out'))
+        print 'zoom_out'
+        print key, mask
+        if key > 0:
+            self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE,
+                                           self.main.key_zoom_out)
 
 
 class MainWindow(object):
@@ -300,12 +428,13 @@ class MainWindow(object):
         Notebook
         """
         self.notebook = GshellNoteBook(self.vbox_main)
-        self.notebook.add_tab(title='Local')
+        self.notebook.add_tab()
         self.vbox_main.pack_start(self.notebook, True, True, 0)
 
         #self.statusbar = gtk.Statusbar()
         #self.vbox_main.pack_start(self.statusbar, True, True, 0)
         self.window.show_all()
+        keybinder = GshellKeyBinder(self)
 
     def main_window_destroy(self, *args):
         gtk.main_quit(*args)
@@ -313,8 +442,49 @@ class MainWindow(object):
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
 
+    def menu_select_all(self, widget, data=None):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            terminal.select_all()
+
+    def menu_copy(self, widget, data=None):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            terminal.copy_clipboard()
+
+    def menu_paste(self, widget, data=None):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            terminal.paste_clipboard()
+
+    def menu_close_tab(self, widget, data=None):
+        terminals = []
+        if data == 'current':
+            terminals.append(self.notebook.get_current_terminal())
+        if data == 'other':
+            terminals += self.notebook.get_all_terminals(exclude_current_page=True)
+        if data == 'all':
+            terminals += self.notebook.get_all_terminals()
+        for terminal in terminals:
+            terminal.close()
+
+    def menu_zoom_tab(self, widget, data=None):
+        print 'MENU Zoom called'
+        print data
+        print widget
+        terminal = self.notebook.get_current_terminal()
+        if hasattr(terminal, data):
+            func = getattr(terminal, data)
+            func()
+
+    def key_zoom_in(self, *args):
+        self.menu_zoom_tab(self, 'zoom_in')
+
+    def key_zoom_out(self, *args):
+        self.menu_zoom_tab(self, 'zoom_out')
+
     def on_new_terminal(self, widget, data=None):
-        self.notebook.add_tab(title='Local')
+        self.notebook.add_tab()
 
     def build_toolbar(self):
         toolbar = gtk.Toolbar()
@@ -331,16 +501,6 @@ class MainWindow(object):
 
         toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
 
-        icon_disconnect = gtk.Image()
-        icon_disconnect.set_from_stock(gtk.STOCK_DISCONNECT, 4)
-        toolbar.append_item("Disconnect", "Disconnect", "Disconnect", icon_disconnect, self.menuitem_response)
-
-        icon_connect = gtk.Image()
-        icon_connect.set_from_stock(gtk.STOCK_CONNECT, 4)
-        toolbar.append_item("Recconnect", "Recconnect", "Recconnect", icon_connect, self.menuitem_response)
-
-        toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
-
         icon_prop = gtk.Image()
         icon_prop.set_from_stock(gtk.STOCK_PROPERTIES, 4)
         toolbar.append_item("Properties", "Properties", "Properties", icon_prop, self.menuitem_response)
@@ -349,15 +509,29 @@ class MainWindow(object):
 
         icon_copy = gtk.Image()
         icon_copy.set_from_stock(gtk.STOCK_COPY, 4)
-        toolbar.append_item("Copy", "Copy", "Copy", icon_copy, self.menuitem_response)
+        toolbar.append_item("Copy", "Copy", "Copy", icon_copy, self.menu_copy)
 
         icon_paste = gtk.Image()
         icon_paste.set_from_stock(gtk.STOCK_PASTE, 4)
-        toolbar.append_item("Paste", "Paste", "Paste", icon_paste, self.menuitem_response)
+        toolbar.append_item("Paste", "Paste", "Paste", icon_paste, self.menu_paste)
 
         icon_find = gtk.Image()
         icon_find.set_from_stock(gtk.STOCK_FIND, 4)
         toolbar.append_item("Search", "Search", "Search", icon_find, self.menuitem_response)
+
+        toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
+
+        icon_zoom_in = gtk.Image()
+        icon_zoom_in.set_from_stock(gtk.STOCK_ZOOM_IN, 4)
+        toolbar.append_item("Zoom In", "Zoom In", "Zoom In", icon_zoom_in, self.menu_zoom_tab, 'zoom_in')
+
+        icon_zoom_out = gtk.Image()
+        icon_zoom_out.set_from_stock(gtk.STOCK_ZOOM_OUT, 4)
+        toolbar.append_item("Zoom Out", "Zoom Out", "Zoom Out", icon_zoom_out, self.menu_zoom_tab, 'zoom_out')
+
+        icon_zoom_orig = gtk.Image()
+        icon_zoom_orig.set_from_stock(gtk.STOCK_ZOOM_100, 4)
+        toolbar.append_item("Zoom Default", "Zoom Default", "Zoom Default", icon_zoom_orig, self.menu_zoom_tab, 'zoom_orig')
 
         toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
 
@@ -377,7 +551,9 @@ class MainWindow(object):
         menus['File'] = (
         {
             'name' : 'New',
-            'action' : self.menuitem_response,
+            'action' : self.on_new_terminal,
+            'data' : None,
+            'icon' : gtk.STOCK_NEW,
             'position' : 0,
             'group' : 1,
             'children' : None,
@@ -385,6 +561,8 @@ class MainWindow(object):
         {
             'name' : 'Open',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : gtk.STOCK_OPEN,
             'position' : 1,
             'group' : 1,
             'children' : None,
@@ -392,6 +570,8 @@ class MainWindow(object):
         {
             'name' : 'Save as',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : gtk.STOCK_SAVE_AS,
             'position' : 2,
             'group' : 1,
             'children' : None,
@@ -399,12 +579,16 @@ class MainWindow(object):
         {
             'name' : 'Log',
             'action' : None,
+            'data' : None,
+            'icon' : None,
             'position' : 0,
             'group' : 2,
             'children' : (
                 {
                     'name' : 'Start',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 1,
                     'position' : 0,
                     'children' : None,
@@ -412,6 +596,8 @@ class MainWindow(object):
                 {
                     'name' : 'Stop',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 1,
                     'position' : 1,
                     'children' : None,
@@ -420,7 +606,9 @@ class MainWindow(object):
         },
         {
             'name' : 'Exit',
-            'action' : self.menuitem_response,
+            'action' : self.main_window_destroy,
+            'data' : None,
+            'icon' : gtk.STOCK_QUIT,
             'position' : 0,
             'group' : 3,
             'children' : None,
@@ -429,28 +617,27 @@ class MainWindow(object):
         menus['Edit'] = (
         {
             'name' : 'Copy',
-            'action' : self.menuitem_response,
+            'action' : self.menu_copy,
+            'data' : None,
+            'icon' : gtk.STOCK_COPY,
             'position' : 0,
             'group' : 1,
             'children' : None
         },
         { 
            'name' : 'Paste',
-            'action' : self.menuitem_response,
+            'action' : self.menu_paste,
+            'data' : None,
+            'icon' : gtk.STOCK_PASTE,
             'position' : 1,
             'group' : 1,
             'children' : None
         },
         {
             'name' : 'Select All',
-            'action' : self.menuitem_response,
-            'position' : 0,
-            'group' : 2,
-            'children' : None
-        },
-        {
-            'name' : 'Select Screen',
-            'action' : self.menuitem_response,
+            'action' : self.menu_select_all,
+            'data' : None,
+            'icon' : gtk.STOCK_SELECT_ALL,
             'position' : 0,
             'group' : 2,
             'children' : None
@@ -459,7 +646,9 @@ class MainWindow(object):
         menus['Tab'] = (
         {
             'name' : 'New Tab',
-            'action' : self.menuitem_response,
+            'action' : self.on_new_terminal,
+            'data' : None,
+            'icon' : None,
             'position' : 0,
             'group' : 1,
             'children' : None
@@ -467,6 +656,8 @@ class MainWindow(object):
         { 
            'name' : 'New Tab Group',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : None,
             'position' : 1,
             'group' : 1,
             'children' : None
@@ -474,12 +665,16 @@ class MainWindow(object):
         {
             'name' : 'Arrange',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : None,
             'position' : 2,
             'group' : 1,
             'children' : (
                 {
                     'name' : 'Arrange Vertical',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 1,
                     'position' : 0,
                     'children' : None,
@@ -487,6 +682,8 @@ class MainWindow(object):
                 {
                     'name' : 'Arrange Horizontal',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 1,
                     'position' : 1,
                     'children' : None,
@@ -494,6 +691,8 @@ class MainWindow(object):
                 {
                     'name' : 'Arrange Tiled',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 1,
                     'position' : 2,
                     'children' : None,
@@ -501,6 +700,8 @@ class MainWindow(object):
                 {
                     'name' : 'Merge All Tab Groups',
                     'action' : self.menuitem_response,
+                    'data' : None,
+                    'icon' : None,
                     'group' : 2,
                     'position' : 0,
                     'children' : None,
@@ -510,73 +711,65 @@ class MainWindow(object):
         },
         {
             'name' : 'Close',
-            'action' : self.menuitem_response,
+            'action' : self.menu_close_tab,
+            'data' : 'current',
+            'icon' : None,
             'position' : 0,
             'group' : 2,
             'children' : None
         },
         {
             'name' : 'Close Other Tabs',
-            'action' : self.menuitem_response,
+            'action' : self.menu_close_tab,
+            'data' : 'other',
+            'icon' : None,
             'position' : 1,
             'group' : 2,
             'children' : None
         },
         {
             'name' : 'Close All Tabs',
-            'action' : self.menuitem_response,
+            'action' : self.menu_close_tab,
+            'data' : 'all',
+            'icon' : None,
             'position' : 2,
             'group' : 2,
             'children' : None
         },
-        {
-            'name' : 'Rename',
-            'action' : self.menuitem_response,
+       {
+            'name' : 'Zoom In',
+            'action' : self.menu_zoom_tab,
+            'data' : 'zoom_in',
+            'icon' : gtk.STOCK_ZOOM_IN,
             'position' : 0,
             'group' : 3,
             'children' : None
         },
         {
-            'name' : 'Set Color',
-            'action' : self.menuitem_response,
-            'position' : 3,
-            'group' : 4,
-            'children' : (
-                {
-                    'name' : 'Default',
-                    'action' : self.menuitem_response,
-                    'group' : 1,
-                    'position' : 0,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Red',
-                    'action' : self.menuitem_response,
-                    'group' : 2,
-                    'position' : 0,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Yellow',
-                    'action' : self.menuitem_response,
-                    'group' : 2,
-                    'position' : 1,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Pink',
-                    'action' : self.menuitem_response,
-                    'group' : 2,
-                    'position' : 2,
-                    'children' : None,
-                },
-            )
+            'name' : 'Zoom Out',
+            'action' : self.menu_zoom_tab,
+            'data' : 'zoom_out',
+            'icon' : gtk.STOCK_ZOOM_OUT,
+            'position' : 1,
+            'group' : 3,
+            'children' : None
+        },
+        {
+            'name' : 'Zoom Default',
+            'action' : self.menu_zoom_tab,
+            'data' : 'zoom_orig',
+            'icon' : gtk.STOCK_ZOOM_100,
+            'position' : 2,
+            'group' : 3,
+            'children' : None
         })
 
         menus['Tools'] = (
         {
             'name' : 'Scripts',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : None,
             'position' : 0,
             'group' : 1,
             'children' : None
@@ -584,6 +777,8 @@ class MainWindow(object):
         {
             'name' : 'Options',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : gtk.STOCK_PREFERENCES,
             'position' : 0,
             'group' : 2,
             'children' : None
@@ -594,6 +789,8 @@ class MainWindow(object):
         {
             'name' : 'Help',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : gtk.STOCK_HELP,
             'position' : 0,
             'group' : 1,
             'children' : None
@@ -601,6 +798,8 @@ class MainWindow(object):
         {
             'name' : 'About',
             'action' : self.menuitem_response,
+            'data' : None,
+            'icon' : gtk.STOCK_ABOUT,
             'position' : 0,
             'group' : 2,
             'children' : None
@@ -622,9 +821,13 @@ class MainWindow(object):
         menu_groups = [tuple(menus) for group, menus in groupby(sorted_menu, lambda x: x['group'])]
         for menus in menu_groups:
             for menu in sorted(menus, key=lambda x: x['position']):
-                menu_item = gtk.MenuItem(menu['name'])
+                if menu['icon']:
+                    menu_item = gtk.ImageMenuItem(menu['icon'])
+                    menu_item.get_children()[0].set_label(menu['name'])
+                else:
+                    menu_item = gtk.MenuItem(menu['name'])
                 if menu['action']:
-                    menu_item.connect("activate", menu['action'])
+                    menu_item.connect("activate", menu['action'], menu['data'])
                 if menu['children']:
                     children_sub = gtk.Menu()
                     self.grouped_menu(children_sub, menu['children'])
