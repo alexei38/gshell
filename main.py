@@ -11,8 +11,6 @@ from config import Config
 from itertools import groupby
 from collections import OrderedDict
 from editablelabel import EditableLabel
-from thread import start_new_thread
-from time import sleep
 
 
 class GshellTerm(vte.Terminal):
