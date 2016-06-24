@@ -1,5 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import gconf
+import os
 import gtk
+from ConfigParser import ConfigParser
 
 DEFAULTS = {
     'allow_bold'            : True,
@@ -51,10 +55,29 @@ class Config(object):
         super(Config, self).__init__(*args, **kwds)
         self.system_font = None
         self.gconf = None
+        self.hosts = []
+        self.work_dir = os.path.dirname(os.path.realpath(__file__))
+        self.reload_hosts()
 
     def __getitem__(self, key):
         """Look up a configuration item"""
         return DEFAULTS.get(key)
+
+    def reload_hosts(self):
+        config_file = os.path.join(self.work_dir, 'hosts.ini')
+        if os.path.exists(config_file):
+            parser = ConfigParser()
+            parser.read(config_file)
+            for section in parser.sections():
+                self.hosts.append({
+                    'name' : parser.get(section, 'name'),
+                    'host' : parser.get(section, 'host'),
+                    'port' : parser.get(section, 'port'),
+                    'username' : parser.get(section, 'username'),
+                    'password' : parser.get(section, 'password'),
+                    'group' : parser.get(section, 'group'),
+                    'description' : parser.get(section, 'description'),
+                })
 
     def get_system_font(self):
         """Look up the system font"""
