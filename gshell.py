@@ -8,7 +8,7 @@ from menu import GshellMenu
 from about import AboutDialog
 from urlparse import urlparse
 from toolbar import GshellToolbar
-from opendialog import OpenDialog
+from managehost import ManageHost
 from notebook import GshellNoteBook
 
 class MainWindow(object):
@@ -18,6 +18,7 @@ class MainWindow(object):
         gtk_settings = gtk.settings_get_default()
         gtk_settings.props.gtk_menu_bar_accel = None
         self.config = Config()
+        self.current_pid = os.getpid()
 
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -83,25 +84,54 @@ class MainWindow(object):
         return False
 
     def main_window_destroy(self, *args):
-        gtk.main_quit(*args)
+        terminals = self.notebook.get_all_terminals()
+        if len(terminals) > 0:
+            dialog = gtk.MessageDialog(self.window, gtk.DIALOG_MODAL,
+                                       gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO,
+                                       "There are open terminals.\nAre you sure you want to quit?")
+            dialog.set_title("Are you sure you want to quit?")
+            response = dialog.run()
+            dialog.destroy()
+            if response == gtk.RESPONSE_YES:
+                gtk.main_quit(*args)
+                return False
+            else:
+                return True
+        else:
+            gtk.main_quit(*args)
+            return False
 
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
 
-    def menu_select_all(self, widget, data=None):
+    def menu_reconnect_tab(self, *args):
+        terminal = self.notebook.get_current_terminal()
+        print terminal
+        if terminal and terminal.host:
+            self.notebook.new_tab_by_host(host=terminal.host, terminal=terminal)
+
+    def menu_disconnect_tab(self, *args):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            terminal.close()
+
+    def menu_select_all(self, *args):
         terminal = self.notebook.get_current_terminal()
         if terminal:
             terminal.select_all()
+        return True
 
-    def menu_copy(self, widget, data=None):
+    def menu_copy(self, *args):
         terminal = self.notebook.get_current_terminal()
         if terminal:
             terminal.copy_clipboard()
+        return True
 
-    def menu_paste(self, widget, data=None):
+    def menu_paste(self, *args):
         terminal = self.notebook.get_current_terminal()
         if terminal:
             terminal.paste_clipboard()
+        return True
 
     def menu_close_tab(self, widget, data=None):
         terminals = []
@@ -120,10 +150,11 @@ class MainWindow(object):
             func = getattr(terminal, data)
             func()
 
-    def menu_open(self, widget, data=None):
-        OpenDialog(self)
+    def menu_open(self, *args):
+        ManageHost(self)
+        return True
 
-    def menu_about(self, widget, data=None):
+    def menu_about(self, *args):
         AboutDialog()
 
     def key_zoom(self, zoom):
@@ -132,14 +163,18 @@ class MainWindow(object):
             return True
         return callback
 
-    def key_close_term(self, *args):
+    def key_close_term(self, accel_group, widget, key, mask):
         terminal = self.notebook.get_current_terminal()
-        terminal.close()
-        return True
-
-    def key_new_tab(self, *args):
-        self.notebook.add_tab()
-        return True
+        if terminal:
+            key_d, mask_d = gtk.accelerator_parse('<ctrl>d')
+            if key == key_d and mask == mask_d and terminal.terminal_active:
+                return False
+            if not terminal.terminal_active:
+                page_num = self.notebook.get_current_page()
+                page = self.notebook.get_nth_page(page_num)
+                self.notebook.remove(page)
+            terminal.close()
+            return True
 
     def key_full_screen(self, *args):
         self.window.set_full_screen = not self.window.set_full_screen
@@ -155,14 +190,6 @@ class MainWindow(object):
 
     def key_prev_tab(self, *args):
         self.notebook.prev_page()
-        return True
-
-    def key_copy(self, *args):
-        self.menu_copy(self)
-        return True
-
-    def key_paste(self, *args):
-        self.menu_paste(self)
         return True
 
     def on_return_conn_string(self, widget, event):
@@ -192,9 +219,9 @@ class MainWindow(object):
             terminal.feed_child(text + '\r')
         widget.set_text('ssh://')
 
-
-    def on_new_terminal(self, widget, data=None):
+    def new_terminal(self, *args):
         self.notebook.add_tab()
+        return True
 
 class GshellKeyBinder(object):
 

@@ -15,7 +15,7 @@ class GshellMenu(gtk.MenuBar):
         menus['File'] = (
         {
             'name' : 'New',
-            'action' : self.main_window.on_new_terminal,
+            'action' : self.main_window.new_terminal,
             'data' : None,
             'icon' : gtk.STOCK_NEW,
             'position' : 0,
@@ -110,7 +110,7 @@ class GshellMenu(gtk.MenuBar):
         menus['Tab'] = (
         {
             'name' : 'New Tab',
-            'action' : self.main_window.on_new_terminal,
+            'action' : self.main_window.new_terminal,
             'data' : None,
             'icon' : None,
             'position' : 0,

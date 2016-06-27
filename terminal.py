@@ -4,28 +4,44 @@ import os
 import gtk
 import vte
 import pango
+import psutil
 import signal
-from config import Config
+import gobject
 
 class GshellTerm(vte.Terminal):
 
     def __init__(self, main_window, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
+        self.mark_close = False
+        self.label = None
+        self.host = None
         self.pid = None
+        self.page_term = None
+        self.terminal_active = False
         self.config = main_window.config
+        self.main_window = main_window
         self.show_all()
         self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
 
-    def spawn_child(self, command=None):
+    def spawn_child(self, command=None, argv=[], envv=[]):
+        print 'GshellTerm::spawn_child called'
         if not command:
             command = os.getenv('SHELL')
-        self.pid = self.fork_command(command=command, directory=os.getenv('HOME'))
+        self.pid = self.fork_command(command=command, argv=argv, envv=envv, directory=os.getenv('HOME'))
+        if self.pid == -1:
+            print 'GshellTerm::spawn_child Failed execute cmd = %s argv = %s' % (command, argv)
+        else:
+            if command in ['sshpass', 'ssh']:
+                self.terminal_active = True
 
     def close(self):
         print 'GshellTerm::close called'
-        print 'GshellTerm::close pid %d' % self.pid
         try:
-            os.kill(self.pid, signal.SIGHUP)
+            proc = psutil.Process(self.main_window.current_pid)
+            neighbors = [p.pid for p in proc.children()]
+            if self.pid in neighbors:
+                print 'GshellTerm::close pid %d' % self.pid
+                os.kill(self.pid, signal.SIGHUP)
         except Exception, ex:
             print 'GshellTerm::close failed: %s' % ex
 
@@ -74,3 +90,16 @@ class GshellTerm(vte.Terminal):
             except AttributeError:
                 antialias = 2
         self.set_font_full(fontdesc, antialias)
+
+    def send_data(self, data, timeout=0, reset=False):
+        if timeout > 0:
+            gobject.timeout_add(timeout, self.feed_child, '%s\r' % data)
+            if reset:
+                gobject.timeout_add(timeout+5, self.reset, True, True)
+                gobject.timeout_add(timeout+10, self.feed_child, '')
+        else:
+            self.feed_child('%s\r' % (data))
+            if reset:
+                self.reset(True, True)
+                self.feed_child('')
+        return True

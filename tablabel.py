@@ -55,3 +55,12 @@ class GshellTabLabel(gtk.HBox):
     def on_close(self, widget, data=None):
         print 'GshellTabLabel::on_close called'
         self.emit('close-clicked', self)
+
+
+    def mark_close(self):
+        text = self.label._label.get_text()
+        self.label._label.set_markup("<span color='darkgray' strikethrough='true'>%s</span>" % text)
+
+    def unmark_close(self):
+        text = self.label._label.get_text()
+        self.label.set_text(text)

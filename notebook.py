@@ -5,49 +5,67 @@ import pango
 from terminal import GshellTerm
 from tablabel import GshellTabLabel
 
+
 class GshellNoteBook(gtk.Notebook):
 
-    def __init__(self, window):
+    def __init__(self, main_window):
         gtk.Notebook.__init__(self)
         self.set_tab_pos(gtk.POS_TOP)
         self.set_scrollable(True)
         self.set_show_tabs(True)
-        self.config = window.config
+        self.main_window = main_window
+        self.config = main_window.config
         self.show_all()
 
-    def add_tab(self, title=None, command=None):
+    def add_tab(self, title=None, command=None, argv=[], envv=[], terminal=None):
         print 'GshellNoteBook::add_tab called'
-        self.terminal = GshellTerm(self)
-        self.terminal.spawn_child(command)
-        self.terminalbox = self.create_terminalbox()
+        if terminal:
+            self.terminal = terminal
+        else:
+            self.terminal = GshellTerm(self.main_window)
+        self.terminal.spawn_child(command=command, argv=argv, envv=envv)
         print "PID Terminal: %s" % self.terminal.pid
-        self.page_term = self.append_page(self.terminalbox)
-        if not title and not command:
-            title = 'Local%s' % (int(self.page_term) + 1)
-        self.label = GshellTabLabel(title + ' ', self)
-
-        self.label.connect('close-clicked', self.close_tab)
-        self.terminal.connect('child-exited', self.on_terminal_exit, self.terminalbox)
-        self.set_tab_label(self.terminalbox, self.label)
-        self.set_page(self.page_term)
+        if command in ['sshpass', 'ssh']:
+            self.terminal.mark_close = True
+        if not terminal:
+            self.terminalbox = self.create_terminalbox()
+            self.page_term = self.append_page(self.terminalbox)
+            self.terminal.page_term = self.page_term
+            if not title:
+                title = 'Term%s' % (int(self.page_term) + 1)
+            self.label = GshellTabLabel(title, self)
+            self.terminal.label = self.label
+            self.label.terminal = self.terminal
+            self.label.connect('close-clicked', self.close_tab)
+            self.terminal.connect('child-exited', self.on_terminal_exit, {'terminalbox' : self.terminalbox, 'label' : self.label, 'terminal' : self.terminal})
+            self.set_tab_label(self.terminalbox, self.label)
+            self.set_page(self.page_term)
+        else:
+            self.label = self.terminal.label
+            self.label.unmark_close()
         self.reconfigure()
         self.show_all()
         self.terminal.grab_focus()
         return self.terminal
 
-    def close_tab(self, widget, label):
-        print 'GshellNoteBook::close_tab called'
-        tabnum = -1
-        for i in xrange(0, self.get_n_pages() + 1):
-            if label == self.get_tab_label(self.get_nth_page(i)):
-                tabnum = i
-                break
-        if tabnum != -1:
-            term = self.get_terminal_by_page(tabnum)
-            if term:
-                term.close()
-            del(label)
-            self.remove_page(tabnum)
+    def new_tab_by_host(self, host, terminal=None):
+        print 'GshellNoteBook::new_tab_by_host called'
+        argv = []
+        envv = []
+        if host['password']:
+            command = 'sshpass'
+        else:
+            command = 'ssh'
+        argv += [command]
+        argv += ['ssh']
+        argv += ['-p', host['port']]
+        argv += ['-l', host['username']]
+        argv += ['-o', 'StrictHostKeyChecking=no']
+        argv += [host['host']]
+        terminal = self.add_tab(title=host['name'], command=command, argv=argv, envv=envv, terminal=terminal)
+        terminal.host = host
+        if host['password']:
+            terminal.send_data(data=host['password'], timeout=2000, reset=True)
 
     def get_terminal_by_page(self, tabnum):
         print 'GshellNoteBook::get_terminal_by_page called'
@@ -75,11 +93,38 @@ class GshellNoteBook(gtk.Notebook):
                 terminals.append(term)
         return terminals
 
-    def on_terminal_exit(self, widget, terminalbox):
+    def on_terminal_exit(self, widget, data):
         print 'GshellNoteBook::on_terminal_exit called'
-        pagepos = self.page_num(terminalbox)
-        if pagepos != -1:
-            self.remove_page(pagepos)
+        if data['terminal'].mark_close:
+            data['terminal'].terminal_active = False
+            data['label'].mark_close()
+        else:
+            pagepos = self.page_num(data['terminalbox'])
+            if pagepos != -1:
+                self.remove_page(pagepos)
+
+    def close_tab(self, widget, label):
+        print 'GshellNoteBook::close_tab called'
+        tabnum = -1
+        for i in xrange(0, self.get_n_pages() + 1):
+            if label == self.get_tab_label(self.get_nth_page(i)):
+                tabnum = i
+                break
+        if tabnum != -1:
+            term = self.get_terminal_by_page(tabnum)
+            if term:
+                if term.terminal_active:
+                    dialog = gtk.MessageDialog(self.main_window.window, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, "This terminal is active?\nAre you sure you want to close?")
+                    response = dialog.run()
+                    dialog.destroy()
+                    if response == gtk.RESPONSE_YES:
+                        term.close()
+                        self.remove_page(tabnum)
+                        del(label)
+                else:
+                    term.close()
+                    del(label)
+                    self.remove_page(tabnum)
 
     def create_terminalbox(self):
         print 'GshellNoteBook::create_terminalbox called'
@@ -206,7 +251,7 @@ class GshellNoteBook(gtk.Notebook):
         self.terminal.set_scroll_on_keystroke(self.config['scroll_on_keystroke'])
         self.terminal.set_scroll_on_output(self.config['scroll_on_output'])
 
-        self.terminal.connect('focus-in-event', self.on_terminal_focus_in)
-        self.terminal.connect('focus-out-event', self.on_terminal_focus_out)
+        #self.terminal.connect('focus-in-event', self.on_terminal_focus_in)
+        #self.terminal.connect('focus-out-event', self.on_terminal_focus_out)
 
         self.terminal.queue_draw()

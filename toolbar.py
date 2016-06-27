@@ -14,11 +14,21 @@ class GshellToolbar(gtk.Toolbar):
 
         icon_new = gtk.Image()
         icon_new.set_from_stock(gtk.STOCK_NEW, 4)
-        self.append_item("New", "New", "New", icon_new, self.main_window.on_new_terminal)
+        self.append_item("New", "New", "New", icon_new, self.main_window.new_terminal)
 
         icon_open = gtk.Image()
         icon_open.set_from_stock(gtk.STOCK_OPEN, 4)
         self.append_item("Open", "Open", "Open", icon_open, self.main_window.menu_open)
+
+        self.append_widget(gtk.SeparatorToolItem(), None, None)
+
+        icon_reconnect = gtk.Image()
+        icon_reconnect.set_from_stock(gtk.STOCK_CONNECT, 4)
+        self.append_item("Reconnect", "Reconnect", "Reconnect", icon_reconnect, self.main_window.menu_reconnect_tab)
+
+        icon_disconnect = gtk.Image()
+        icon_disconnect.set_from_stock(gtk.STOCK_DISCONNECT, 4)
+        self.append_item("Disconnect", "Disconnect", "Disconnect", icon_disconnect, self.main_window.menu_disconnect_tab)
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)
 

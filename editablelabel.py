@@ -77,7 +77,10 @@ class EditableLabel(gtk.EventBox):
         if event.type == gtk.gdk._2BUTTON_PRESS:
             self.remove (self._label)
             self._entry = gtk.Entry ()
-            self._entry.set_text (self._label.get_text ())
+            self._old_text = self._label.get_text()
+            self._old_label = self._label.get_label()
+            self._old_use_markup = self._label.get_use_markup()
+            self._entry.set_text (self._old_text)
             self._entry.show ()
             self.add (self._entry)
             sig = self._entry.connect ("focus-out-event", self._entry_to_label)
@@ -121,7 +124,11 @@ class EditableLabel(gtk.EventBox):
             self.set_text (self._autotext)
         elif entry != label:
             self._custom = True
-            self._label.set_text (entry)
+            if self._old_use_markup:
+                entry = self._old_label.replace(self._old_text, entry)
+                self._label.set_markup(entry)
+            else:
+                self._label.set_text(entry)
         self._entry_to_label (None, None)
 
     def _on_entry_keypress (self, widget, event):

@@ -39,13 +39,15 @@ DEFAULTS = {
         ('key_zoom', 'zoom_in')     : ['<Control>equal', '<Control>KP_Add'],
         ('key_zoom', 'zoom_out')    : ['<Control>minus', '<Control>KP_Subtract'],
         ('key_zoom', 'zoom_orig')   : ['<Control>KP_0', '<Control>0'],
-        'key_close_term'            : '<Shift><Control>w',
-        'key_copy'                  : '<Shift><Control>c',
-        'key_paste'                 : '<Shift><Control>v',
-        'key_new_tab'               : '<Shift><Control>t',
+        'menu_open'                 : '<Shift><Control>O',
+        'key_close_term'            : ['<Shift><Control>w', '<Control>d'],
+        'menu_copy'                 : '<Shift><Control>c',
+        'menu_paste'                : '<Shift><Control>v',
+        'new_terminal'              : ['<Shift><Control>t', '<Shift><Control>n'],
         'key_next_tab'              : '<Control>Page_Down',
         'key_prev_tab'              : '<Control>Page_Up',
         'key_full_screen'           : 'F11',
+        'menu_select_all'           : '<Shift><Control>A'
     }
 }
 
@@ -70,6 +72,7 @@ class Config(object):
             parser.read(config_file)
             for section in parser.sections():
                 self.hosts.append({
+                    'uuid' : section,
                     'name' : parser.get(section, 'name'),
                     'host' : parser.get(section, 'host'),
                     'port' : parser.get(section, 'port'),
