@@ -66,15 +66,17 @@ class Config(object):
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
         self.reload_hosts()
 
-    def save_window_size(self, scale):
+    def save_window_size(self, scale, state):
         width, height = scale
+        self.gconf.set_bool(self.gconf_path('/general/window_maximize'), bool(state))
         self.gconf.set_int(self.gconf_path('/general/window_width'), int(width))
         self.gconf.set_int(self.gconf_path('/general/window_height'), int(height))
 
     def get_window_size(self):
         width = self.gconf.get_int(self.gconf_path('/general/window_width'))
         height = self.gconf.get_int(self.gconf_path('/general/window_height'))
-        return (width, height)
+        maximize = self.gconf.get_bool(self.gconf_path('/general/window_maximize'))
+        return (width, height, maximize)
 
     def __getitem__(self, key):
         """Look up a configuration item"""

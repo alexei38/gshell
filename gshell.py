@@ -24,8 +24,8 @@ class Gshell(object):
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_full_screen = False
-        width, height = self.config.get_window_size()
-        if width and height:
+        width, height, maximize = self.config.get_window_size()
+        if width and height and not maximize:
             self.window.set_size_request(width, height)
         else:
             self.window.maximize()
@@ -62,7 +62,11 @@ class Gshell(object):
         self.window.show_all()
 
     def gshell_destroy(self, *args):
-        self.config.save_window_size(self.window.get_size())
+        maximized_mask = gtk.gdk.WINDOW_STATE_MAXIMIZED
+        state = (self.window.get_window().get_state() & maximized_mask) == maximized_mask
+        scale = self.window.get_size()
+        self.config.save_window_size(scale, state)
+
         terminals = self.notebook.get_all_terminals()
         if len(terminals) > 0:
             dialog = gtk.MessageDialog(self.window, gtk.DIALOG_MODAL,
