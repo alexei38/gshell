@@ -3,6 +3,8 @@
 
 import os
 import gtk
+import gobject
+import keybinder
 from config import Config
 from menu import GshellMenu
 from about import AboutDialog
@@ -19,7 +21,6 @@ class Gshell(object):
         gtk_settings.props.gtk_menu_bar_accel = None
         self.config = Config()
         self.current_pid = os.getpid()
-        self.build_window()
 
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -51,7 +52,7 @@ class Gshell(object):
 
         #self.statusbar = gtk.Statusbar()
         #self.vbox_main.pack_start(self.statusbar, True, True, 0)
-        keybinder = GshellKeyBinder(self)
+        self.hotkeys = GshellKeyBinder(self)
         self.notebook.add_tab()
         self.window.show_all()
 
@@ -72,6 +73,12 @@ class Gshell(object):
         else:
             gtk.main_quit(*args)
             return False
+
+    def set_terminal_focus(self):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            terminal.grab_focus()
+        return terminal
 
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
@@ -144,13 +151,22 @@ class Gshell(object):
     def menu_search(self, *args):
         terminal = self.notebook.get_current_terminal()
         if terminal:
-            if terminal.search.flags() & gtk.VISIBLE:
+            if terminal.search.get_property('visible'):
                 terminal.search.hide()
-                terminal = self.notebook.get_current_terminal()
                 terminal.grab_focus()
             else:
                 terminal.search.show()
                 terminal.search.entry.grab_focus()
+
+    def show_hide(self, *args):
+        if not self.window.get_property('visible'):
+            self.hide_gshell = False
+            self.window.show()
+            self.window.present()
+            self.window.window.focus(0)
+            self.set_terminal_focus()
+            return
+        self.window.hide()
 
     def key_zoom(self, zoom):
         def callback(*args):
@@ -261,16 +277,18 @@ class Gshell(object):
 
 class GshellKeyBinder(object):
 
-    def __init__(self, main):
+    def __init__(self, gshell):
         super(GshellKeyBinder, self).__init__()
-        self.main = main
-        self.window = self.main.window
-        self.config = self.main.config
-        self.keybinder = self.config['keybinder']
+        self.gshell = gshell
+        self.window = self.gshell.window
+        self.config = self.gshell.config
+        self.local_keybinder = self.config['local_keybinder']
+        self.global_keybinder = self.config['global_keybinder']
         self.accel_group = None
-        self.reload_accelerators()
+        self.reload_local()
+        self.reload_global()
 
-    def reload_accelerators(self):
+    def reload_local(self):
         if self.accel_group:
             self.window.remove_accel_group(self.accel_group)
         self.accel_group = gtk.AccelGroup()
@@ -278,7 +296,7 @@ class GshellKeyBinder(object):
         self.load_accelerators()
 
     def load_accelerators(self):
-        for action, keys in self.keybinder.iteritems():
+        for action, keys in self.local_keybinder.iteritems():
             param = None
             if isinstance(action, tuple):
                 action, param = action
@@ -287,14 +305,34 @@ class GshellKeyBinder(object):
             for key in keys:
                 g_key, mask = gtk.accelerator_parse(key)
                 if g_key > 0:
-                    if hasattr(self.main, action):
+                    if hasattr(self.gshell, action):
                         if param:
-                            func = getattr(self.main, action)(param)
+                            func = getattr(self.gshell, action)(param)
                         else:
-                            func = getattr(self.main, action)
+                            func = getattr(self.gshell, action)
                         self.accel_group.connect_group(g_key, mask, gtk.ACCEL_VISIBLE, func)
+
+    def reload_global(self):
+        for action, keys in self.global_keybinder.iteritems():
+            param = None
+            if isinstance(action, tuple):
+                action, param = action
+            if not isinstance(keys, list):
+                keys = [keys]
+            if param:
+                func = getattr(self.gshell, action)(param)
+            else:
+                func = getattr(self.gshell, action)
+            for key in keys:
+                if hasattr(self.gshell, action):
+                    if param:
+                        func = getattr(self.gshell, action)(param)
+                    else:
+                        func = getattr(self.gshell, action)
+                    keybinder.bind(key, func)
 
 
 if __name__ == '__main__':
-    Gshell()
+    gshell = Gshell()
+    gshell.build_window()
     gtk.main()

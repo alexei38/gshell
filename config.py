@@ -35,7 +35,7 @@ DEFAULTS = {
     'alternate_screen_scroll': True,
     'inactive_color_offset': 0.8,
     'disable_real_transparency' : True,
-    'keybinder': {
+    'local_keybinder': {
         ('key_zoom', 'zoom_in')     : ['<Control>equal', '<Control>KP_Add'],
         ('key_zoom', 'zoom_out')    : ['<Control>minus', '<Control>KP_Subtract'],
         ('key_zoom', 'zoom_orig')   : ['<Control>KP_0', '<Control>0'],
@@ -49,6 +49,9 @@ DEFAULTS = {
         'key_full_screen'           : 'F11',
         'menu_select_all'           : '<Shift><Control>A',
         'menu_search'               : '<Shift><Control>F',
+    },
+    'global_keybinder': {
+        'show_hide'                 : '<Control>F12',
     }
 }
 
