@@ -10,18 +10,22 @@ import gobject
 
 class GshellTerm(vte.Terminal):
 
-    def __init__(self, main_window, *args, **kwds):
+    def __init__(self, gshell, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
         self.mark_close = False
         self.label = None
         self.host = None
         self.pid = None
         self.page_term = None
+        self.seatch = None
+        self.scrollbar = None
+        self.logger = None
         self.terminal_active = False
-        self.config = main_window.config
-        self.main_window = main_window
-        self.show_all()
         self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
+        self.config = gshell.config
+        self.gshell = gshell
+        self.show_all()
+        self.configure()
 
     def spawn_child(self, command=None, argv=[], envv=[]):
         print 'GshellTerm::spawn_child called'
@@ -37,7 +41,7 @@ class GshellTerm(vte.Terminal):
     def close(self):
         print 'GshellTerm::close called'
         try:
-            proc = psutil.Process(self.main_window.current_pid)
+            proc = psutil.Process(self.gshell.current_pid)
             neighbors = [p.pid for p in proc.children()]
             if self.pid in neighbors:
                 print 'GshellTerm::close pid %d' % self.pid
@@ -103,3 +107,116 @@ class GshellTerm(vte.Terminal):
                 self.reset(True, True)
                 self.feed_child('')
         return True
+
+    def configure(self):
+        if hasattr(self, 'set_alternate_screen_scroll'):
+            self.set_alternate_screen_scroll(self.config['alternate_screen_scroll'])
+        if self.config['copy_on_selection']:
+            self.connect('selection-changed', lambda widget: self.copy_clipboard())
+        self.set_emulation(self.config['emulation'])
+        self.set_encoding(self.config['encoding'])
+        self.set_word_chars(self.config['word_chars'])
+        self.set_mouse_autohide(self.config['mouse_autohide'])
+        if self.config['use_system_font'] == True:
+            font = self.config.get_system_font()
+        else:
+            font = self.config['font']
+        self.set_font(pango.FontDescription(font))
+        self.set_allow_bold(self.config['allow_bold'])
+        if self.config['use_theme_colors']:
+            self.fgcolor_active = self.get_style().text[gtk.STATE_NORMAL]
+            self.bgcolor = self.get_style().base[gtk.STATE_NORMAL]
+        else:
+            self.fgcolor_active = gtk.gdk.color_parse(self.config['foreground_color'])
+            self.bgcolor = gtk.gdk.color_parse(self.config['background_color'])
+
+        factor = self.config['inactive_color_offset']
+        if factor > 1.0:
+          factor = 1.0
+        self.fgcolor_inactive = self.fgcolor_active.copy()
+
+        for bit in ['red', 'green', 'blue']:
+            setattr(self.fgcolor_inactive, bit,
+                    getattr(self.fgcolor_inactive, bit) * factor)
+
+        colors = self.config['palette'].split(':')
+        self.palette_active = []
+        self.palette_inactive = []
+        for color in colors:
+            if color:
+                newcolor = gtk.gdk.color_parse(color)
+                newcolor_inactive = newcolor.copy()
+                for bit in ['red', 'green', 'blue']:
+                    setattr(newcolor_inactive, bit, getattr(newcolor_inactive, bit) * factor)
+                self.palette_active.append(newcolor)
+                self.palette_inactive.append(newcolor_inactive)
+        self.set_colors(self.fgcolor_active, self.bgcolor, self.palette_active)
+        if hasattr(self, 'set_cursor_shape'):
+            self.set_cursor_shape(getattr(vte, 'CURSOR_SHAPE_%s' % self.config['cursor_shape'].upper()))
+
+        background_type = self.config['background_type']
+        if background_type == 'image' and self.config['background_image'] is not None and self.config['background_image'] != '':
+            self.set_background_image_file(self.config['background_image'])
+            self.set_scroll_background(self.config['scroll_background'])
+        else:
+            try:
+                self.set_background_image(None)
+            except TypeError:
+                pass
+            self.set_scroll_background(False)
+
+        if background_type in ('image', 'transparent'):
+            self.set_background_tint_color(gtk.gdk.color_parse(
+                                               self.config['background_color']))
+            opacity = int(self.config['background_darkness'] * 65536)
+            saturation = 1.0 - float(self.config['background_darkness'])
+            self.set_background_saturation(saturation)
+        else:
+            opacity = 65535
+            self.set_background_saturation(1)
+
+        if self.composite_support:
+            self.set_opacity(opacity)
+        if not self.composite_support or self.config['disable_real_transparency']:
+            background_transparent = True
+        else:
+            if self.is_composited() == False:
+                background_transparent = True
+            else:
+                background_transparent = False
+        if self.config['background_type'] == 'transparent':
+            self.set_background_transparent(background_transparent)
+        else:
+            self.set_background_transparent(False)
+
+        if hasattr(vte, 'VVVVTE_CURSOR_BLINK_ON'):
+            if self.config['cursor_blink'] == True:
+                self.set_cursor_blink_mode('VTE_CURSOR_BLINK_ON')
+            else:
+                self.set_cursor_blink_mode('VTE_CURSOR_BLINK_OFF')
+        else:
+            self.set_cursor_blinks(self.config['cursor_blink'])
+
+        if self.config['scrollback_infinite'] == True:
+            scrollback_lines = -1
+        else:
+            scrollback_lines = self.config['scrollback_lines']
+        self.set_scrollback_lines(scrollback_lines)
+        self.set_scroll_on_keystroke(self.config['scroll_on_keystroke'])
+        self.set_scroll_on_output(self.config['scroll_on_output'])
+
+        self.connect('focus-in-event', self.on_terminal_focus_in)
+        self.connect('focus-out-event', self.on_terminal_focus_out)
+
+        self.queue_draw()
+        return False
+
+    def on_terminal_focus_in(self, *args):
+        if self:
+            self.set_colors(self.fgcolor_active, self.bgcolor, self.palette_active)
+        return False
+
+    def on_terminal_focus_out(self, *args):
+        if self:
+            self.set_colors(self.fgcolor_inactive, self.bgcolor, self.palette_inactive)
+        return False

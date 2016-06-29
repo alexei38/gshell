@@ -3,9 +3,9 @@
 import gtk
 
 class GshellToolbar(gtk.Toolbar):
-    def __init__(self, main_window):
+    def __init__(self, gshell):
         super(GshellToolbar, self).__init__()
-        self.main_window = main_window
+        self.gshell = gshell
         self.build_toolbar()
 
     def build_toolbar(self):
@@ -14,64 +14,86 @@ class GshellToolbar(gtk.Toolbar):
 
         icon_new = gtk.Image()
         icon_new.set_from_stock(gtk.STOCK_NEW, 4)
-        self.append_item("New", "New", "New", icon_new, self.main_window.new_terminal)
+        self.append_item("New", "New", "New", icon_new, self.gshell.new_terminal)
 
         icon_open = gtk.Image()
         icon_open.set_from_stock(gtk.STOCK_OPEN, 4)
-        self.append_item("Open", "Open", "Open", icon_open, self.main_window.menu_open)
+        self.append_item("Open", "Open", "Open", icon_open, self.gshell.menu_open)
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)
 
-        icon_reconnect = gtk.Image()
-        icon_reconnect.set_from_stock(gtk.STOCK_CONNECT, 4)
-        self.append_item("Reconnect", "Reconnect", "Reconnect", icon_reconnect, self.main_window.menu_reconnect_tab)
+        self.reconnect_button = gtk.ToolButton(gtk.STOCK_CONNECT)
+        self.reconnect_button.set_label("Reconnect")
+        self.reconnect_button.set_sensitive(False)
+        self.reconnect_button.connect('clicked', self.gshell.menu_reconnect_tab)
+        self.append_widget(self.reconnect_button, "Reconnect", "Reconnect")
 
-        icon_disconnect = gtk.Image()
-        icon_disconnect.set_from_stock(gtk.STOCK_DISCONNECT, 4)
-        self.append_item("Disconnect", "Disconnect", "Disconnect", icon_disconnect, self.main_window.menu_disconnect_tab)
-
-        self.append_widget(gtk.SeparatorToolItem(), None, None)
-
-        icon_prop = gtk.Image()
-        icon_prop.set_from_stock(gtk.STOCK_PROPERTIES, 4)
-        self.append_item("Properties", "Properties", "Properties", icon_prop, self.main_window.menuitem_response)
+        self.disconnect_button = gtk.ToolButton(gtk.STOCK_DISCONNECT)
+        self.disconnect_button.set_label("Disconnect")
+        self.disconnect_button.set_sensitive(False)
+        self.disconnect_button.connect('clicked', self.gshell.menu_disconnect_tab)
+        self.append_widget(self.disconnect_button, "Disconnect", "Disconnect")
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)
 
-        icon_copy = gtk.Image()
-        icon_copy.set_from_stock(gtk.STOCK_COPY, 4)
-        self.append_item("Copy", "Copy", "Copy", icon_copy, self.main_window.menu_copy)
-
-        icon_paste = gtk.Image()
-        icon_paste.set_from_stock(gtk.STOCK_PASTE, 4)
-        self.append_item("Paste", "Paste", "Paste", icon_paste, self.main_window.menu_paste)
-
-        icon_find = gtk.Image()
-        icon_find.set_from_stock(gtk.STOCK_FIND, 4)
-        self.append_item("Search", "Search", "Search", icon_find, self.main_window.menuitem_response)
+        self.properies_button = gtk.ToolButton(gtk.STOCK_PROPERTIES)
+        self.properies_button.set_label("Properties")
+        self.properies_button.set_sensitive(False)
+        self.properies_button.connect('clicked', self.gshell.menuitem_response)
+        self.append_widget(self.properies_button, "Properties", "Properties")
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)
 
-        icon_zoom_in = gtk.Image()
-        icon_zoom_in.set_from_stock(gtk.STOCK_ZOOM_IN, 4)
-        self.append_item("Zoom In", "Zoom In", "Zoom In", icon_zoom_in, self.main_window.menu_zoom_tab, 'zoom_in')
+        self.copy_button = gtk.ToolButton(gtk.STOCK_COPY)
+        self.copy_button.set_label("Copy")
+        self.copy_button.set_sensitive(False)
+        self.copy_button.connect('clicked', self.gshell.menu_copy)
+        self.append_widget(self.copy_button, "Copy", "Copy")
 
-        icon_zoom_out = gtk.Image()
-        icon_zoom_out.set_from_stock(gtk.STOCK_ZOOM_OUT, 4)
-        self.append_item("Zoom Out", "Zoom Out", "Zoom Out", icon_zoom_out, self.main_window.menu_zoom_tab, 'zoom_out')
+        self.paste_button = gtk.ToolButton(gtk.STOCK_PASTE)
+        self.paste_button.set_label("Paste")
+        self.paste_button.set_sensitive(False)
+        self.paste_button.connect('clicked', self.gshell.menu_paste)
+        self.append_widget(self.paste_button, "Paste", "Paste")
 
-        icon_zoom_orig = gtk.Image()
-        icon_zoom_orig.set_from_stock(gtk.STOCK_ZOOM_100, 4)
-        self.append_item("Zoom Default", "Zoom Default", "Zoom Default", icon_zoom_orig, self.main_window.menu_zoom_tab, 'zoom_orig')
+        self.search_button = gtk.ToolButton(gtk.STOCK_FIND)
+        self.search_button.set_label("Search")
+        self.search_button.set_sensitive(False)
+        self.search_button.connect('clicked', self.gshell.menu_search)
+        self.append_widget(self.search_button, "Search", "Search")
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)
 
-        icon_new_group = gtk.Image()
-        icon_new_group.set_from_stock(gtk.STOCK_DIRECTORY, 4)
-        self.append_item("New Tab Group", "New Tab Group", "New Tab Group", icon_new_group, self.main_window.menuitem_response)
+        self.zoom_in_button = gtk.ToolButton(gtk.STOCK_ZOOM_IN)
+        self.zoom_in_button.set_label("Zoom In")
+        self.zoom_in_button.set_sensitive(False)
+        self.zoom_in_button.connect('clicked', self.gshell.menu_zoom_tab, 'zoom_in')
+        self.append_widget(self.zoom_in_button, "Zoom In", "Zoom In")
 
-        icon_arragne = gtk.Image()
-        icon_arragne.set_from_stock(gtk.STOCK_ADD, 4)
-        self.append_item("Tab Arrange", "Tab Arrange", "Tab Arrange", icon_arragne, self.main_window.menuitem_response)
+        self.zoom_out_button = gtk.ToolButton(gtk.STOCK_ZOOM_OUT)
+        self.zoom_out_button.set_label("Zoom Out")
+        self.zoom_out_button.set_sensitive(False)
+        self.zoom_out_button.connect('clicked', self.gshell.menu_zoom_tab, 'zoom_out')
+        self.append_widget(self.zoom_out_button, "Zoom Out", "Zoom Out")
+
+        self.zoom_orig_button = gtk.ToolButton(gtk.STOCK_ZOOM_100)
+        self.zoom_orig_button.set_label("Zoom Default")
+        self.zoom_orig_button.set_sensitive(False)
+        self.zoom_orig_button.connect('clicked', self.gshell.menu_zoom_tab, 'zoom_orig')
+        self.append_widget(self.zoom_orig_button, "Zoom Default", "Zoom Default")
+
+        self.append_widget(gtk.SeparatorToolItem(), None, None)
+
+        self.new_group_button = gtk.ToolButton(gtk.STOCK_DIRECTORY)
+        self.new_group_button.set_label("New Tab Group")
+        self.new_group_button.set_sensitive(False)
+        self.new_group_button.connect('clicked', self.gshell.menuitem_response)
+        self.append_widget(self.new_group_button, "New Tab Group", "New Tab Group")
+
+        self.tab_arrange_button = gtk.ToolButton(gtk.STOCK_ZOOM_100)
+        self.tab_arrange_button.set_label("Tab Arrange")
+        self.tab_arrange_button.set_sensitive(False)
+        self.tab_arrange_button.connect('clicked', self.gshell.menuitem_response)
+        self.append_widget(self.tab_arrange_button, "Tab Arrange", "Tab Arrange")
 
         self.append_widget(gtk.SeparatorToolItem(), None, None)

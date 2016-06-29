@@ -11,14 +11,15 @@ from toolbar import GshellToolbar
 from managehost import ManageHost
 from notebook import GshellNoteBook
 
-class MainWindow(object):
+class Gshell(object):
 
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(Gshell, self).__init__()
         gtk_settings = gtk.settings_get_default()
         gtk_settings.props.gtk_menu_bar_accel = None
         self.config = Config()
         self.current_pid = os.getpid()
+        self.build_window()
 
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -26,8 +27,7 @@ class MainWindow(object):
         self.window.set_size_request(1200, 860)
         self.window.set_title("Gshell")
         self.window.set_position(gtk.WIN_POS_CENTER)
-        self.window.connect("delete_event", self.main_window_destroy)
-        self.window.connect("key-press-event",self._key_press_event)
+        self.window.connect("delete_event", self.gshell_destroy)
         self.vbox_main = gtk.VBox()
         self.window.add(self.vbox_main)
 
@@ -44,23 +44,6 @@ class MainWindow(object):
         self.vbox_main.pack_start(self.toolbar, False, False, 0)
 
         """
-           Connection String
-        """
-        self.toolbar_conn = gtk.Toolbar()
-        self.toolbar_conn.set_orientation(gtk.ORIENTATION_HORIZONTAL)
-        self.toolbar_conn.set_style(gtk.TOOLBAR_ICONS)
-        self.conn_string = gtk.Entry()
-        self.conn_string.set_text('ssh://')
-        self.conn_string.set_size_request(350, 25)
-        self.conn_string.set_editable(True)
-        self.conn_string.connect('key-press-event', self.on_return_conn_string)
-        icon_connect = gtk.Image()
-        icon_connect.set_from_stock(gtk.STOCK_CONNECT, 4)
-        self.toolbar_conn.append_widget(self.conn_string, None, None)
-        self.toolbar_conn.append_item("Connect", "Connect", "Connect", icon_connect, self.menu_connect_from_string, self.conn_string)
-        self.vbox_main.pack_start(self.toolbar_conn, False, False, 0)
-
-        """
         Notebook
         """
         self.notebook = GshellNoteBook(self)
@@ -72,18 +55,7 @@ class MainWindow(object):
         self.notebook.add_tab()
         self.window.show_all()
 
-
-    def _key_press_event(self, widget, event):
-        keyval = event.keyval
-        keyval_name = gtk.gdk.keyval_name(keyval)
-        state = event.state
-        ctrl = (state & gtk.gdk.CONTROL_MASK)
-        shift = (state & gtk.gdk.SHIFT_MASK)
-        print 'State %s' % state
-        print 'Keyval %s' % keyval_name
-        return False
-
-    def main_window_destroy(self, *args):
+    def gshell_destroy(self, *args):
         terminals = self.notebook.get_all_terminals()
         if len(terminals) > 0:
             dialog = gtk.MessageDialog(self.window, gtk.DIALOG_MODAL,
@@ -104,9 +76,21 @@ class MainWindow(object):
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
 
+    def menu_log(self, widget, action):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            if terminal.logger.logging and action == 'stop':
+                terminal.logger.stop_logger()
+            if not terminal.logger.logging and action == 'start':
+                if terminal.host:
+                    terminal.logger.start_logger(terminal.host['log'])
+                else:
+                    terminal.logger.start_logger()
+            self.change_menu_sensitive(self.menu, ['Start'], not terminal.logger.logging)
+            self.change_menu_sensitive(self.menu, ['Stop'], terminal.logger.logging)
+
     def menu_reconnect_tab(self, *args):
         terminal = self.notebook.get_current_terminal()
-        print terminal
         if terminal and terminal.host:
             self.notebook.new_tab_by_host(host=terminal.host, terminal=terminal)
 
@@ -157,6 +141,17 @@ class MainWindow(object):
     def menu_about(self, *args):
         AboutDialog()
 
+    def menu_search(self, *args):
+        terminal = self.notebook.get_current_terminal()
+        if terminal:
+            if terminal.search.flags() & gtk.VISIBLE:
+                terminal.search.hide()
+                terminal = self.notebook.get_current_terminal()
+                terminal.grab_focus()
+            else:
+                terminal.search.show()
+                terminal.search.entry.grab_focus()
+
     def key_zoom(self, zoom):
         def callback(*args):
             self.menu_zoom_tab(self, zoom)
@@ -167,13 +162,14 @@ class MainWindow(object):
         terminal = self.notebook.get_current_terminal()
         if terminal:
             key_d, mask_d = gtk.accelerator_parse('<ctrl>d')
-            if key == key_d and mask == mask_d and terminal.terminal_active:
+            if key == key_d and mask == mask_d and (terminal.terminal_active or not terminal.host):
                 return False
             if not terminal.terminal_active:
                 page_num = self.notebook.get_current_page()
                 page = self.notebook.get_nth_page(page_num)
                 self.notebook.remove(page)
             terminal.close()
+            self.switch_toolbar_sensitive()
             return True
 
     def key_full_screen(self, *args):
@@ -192,36 +188,76 @@ class MainWindow(object):
         self.notebook.prev_page()
         return True
 
-    def on_return_conn_string(self, widget, event):
-        if event.keyval in [gtk.keysyms.Return, gtk.keysyms.KP_Enter]:
-            self.connect_from_string(widget)
-            return True
-        return False
-
-    def menu_connect_from_string(self, widget, conn_string):
-        return self.connect_from_string(conn_string)
-
-    def connect_from_string(self, widget):
-        if not isinstance(widget, gtk.Entry):
-            return False
-        text = widget.get_text()
-        parse = urlparse(text)
-        if parse.scheme == 'ssh' and parse.hostname:
-            cmd = 'ssh %s' % parse.hostname
-            if parse.username:
-                cmd += ' -l %s' % parse.username
-            port = parse.port or '22'
-            cmd += ' -p %s' % port
-            terminal = self.notebook.add_tab(title=parse.hostname)
-            terminal.feed_child(cmd + '\r')
-        else:
-            terminal = self.notebook.add_tab()
-            terminal.feed_child(text + '\r')
-        widget.set_text('ssh://')
-
     def new_terminal(self, *args):
         self.notebook.add_tab()
         return True
+
+    def switch_toolbar_sensitive(self, terminal=None, *args):
+        if not terminal:
+            terminal = self.notebook.get_current_terminal()
+        if terminal:
+            self.change_menu_sensitive(self.menu, ['Start'], not terminal.logger.logging)
+            self.change_menu_sensitive(self.menu, ['Stop'], terminal.logger.logging)
+            if terminal.host:
+                self.toolbar.reconnect_button.set_sensitive(not terminal.terminal_active)
+                self.toolbar.disconnect_button.set_sensitive(terminal.terminal_active)
+            else:
+                self.toolbar.reconnect_button.set_sensitive(False)
+                self.toolbar.disconnect_button.set_sensitive(False)
+            self.toolbar.copy_button.set_sensitive(True)
+            self.toolbar.paste_button.set_sensitive(True)
+            self.toolbar.search_button.set_sensitive(True)
+            self.toolbar.zoom_in_button.set_sensitive(True)
+            self.toolbar.zoom_out_button.set_sensitive(True)
+            self.toolbar.zoom_orig_button.set_sensitive(True)
+        else:
+            self.toolbar.reconnect_button.set_sensitive(False)
+            self.toolbar.disconnect_button.set_sensitive(False)
+            self.toolbar.copy_button.set_sensitive(False)
+            self.toolbar.paste_button.set_sensitive(False)
+            self.toolbar.search_button.set_sensitive(False)
+            self.toolbar.zoom_in_button.set_sensitive(False)
+            self.toolbar.zoom_out_button.set_sensitive(False)
+            self.toolbar.zoom_orig_button.set_sensitive(False)
+            self.change_menu_sensitive(self.menu, ['Start', 'Stop'], False)
+        self.switch_menu_sensitive(terminal)
+
+    def switch_menu_sensitive(self, terminal=None, *args):
+        names = [
+            'Log',
+            'Edit',
+            'New Tab Group',
+            'Arrange',
+            'Close',
+            'Close All Tabs',
+            'Close Other Tabs',
+            'Zoom In',
+            'Zoom Out',
+            'Zoom Default',
+        ]
+        self.change_menu_sensitive(self.menu, names, bool(terminal))
+
+    def change_menu_sensitive(self, menu_item, names, sensitive):
+        menu = None
+        if isinstance(menu_item, gtk.MenuItem) or isinstance(menu_item, gtk.ImageMenuItem):
+            menu = menu_item.get_submenu()
+        elif isinstance(menu_item, gtk.Menu) or isinstance(menu_item, gtk.MenuBar):
+            menu = menu_item
+        else:
+            return None
+        if menu:
+            for child in menu.get_children():
+                label = None
+                if isinstance(child, gtk.SeparatorMenuItem):
+                    continue
+                if isinstance(child, gtk.MenuItem):
+                    label = child.get_label()
+                if isinstance(child, gtk.ImageMenuItem):
+                    label = child.get_child().get_text()
+                if label in names:
+                    child.set_sensitive(sensitive)
+                else:
+                    self.change_menu_sensitive(child, names, sensitive)
 
 class GshellKeyBinder(object):
 
@@ -260,6 +296,5 @@ class GshellKeyBinder(object):
 
 
 if __name__ == '__main__':
-    main_window = MainWindow()
-    main_window.build_window()
+    Gshell()
     gtk.main()

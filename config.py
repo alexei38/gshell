@@ -47,7 +47,8 @@ DEFAULTS = {
         'key_next_tab'              : '<Control>Page_Down',
         'key_prev_tab'              : '<Control>Page_Up',
         'key_full_screen'           : 'F11',
-        'menu_select_all'           : '<Shift><Control>A'
+        'menu_select_all'           : '<Shift><Control>A',
+        'menu_search'               : '<Shift><Control>F',
     }
 }
 
@@ -80,6 +81,7 @@ class Config(object):
                     'password' : parser.get(section, 'password'),
                     'group' : parser.get(section, 'group'),
                     'description' : parser.get(section, 'description'),
+                    'log' : parser.get(section, 'log'),
                 })
 
     def get_system_font(self):

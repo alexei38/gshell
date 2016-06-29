@@ -5,9 +5,9 @@ from itertools import groupby
 from collections import OrderedDict
 
 class GshellMenu(gtk.MenuBar):
-    def __init__(self, main_window):
+    def __init__(self, gshell):
         super(GshellMenu, self).__init__()
-        self.main_window = main_window
+        self.gshell = gshell
         self.menu = self.build_menu()
 
     def build_menu(self):
@@ -15,7 +15,7 @@ class GshellMenu(gtk.MenuBar):
         menus['File'] = (
         {
             'name' : 'New',
-            'action' : self.main_window.new_terminal,
+            'action' : self.gshell.new_terminal,
             'data' : None,
             'icon' : gtk.STOCK_NEW,
             'position' : 0,
@@ -24,7 +24,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Open',
-            'action' : self.main_window.menu_open,
+            'action' : self.gshell.menu_open,
             'data' : None,
             'icon' : gtk.STOCK_OPEN,
             'position' : 1,
@@ -33,7 +33,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Save as',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : gtk.STOCK_SAVE_AS,
             'position' : 2,
@@ -50,8 +50,8 @@ class GshellMenu(gtk.MenuBar):
             'children' : (
                 {
                     'name' : 'Start',
-                    'action' : self.main_window.menuitem_response,
-                    'data' : None,
+                    'action' : self.gshell.menu_log,
+                    'data' : 'start',
                     'icon' : None,
                     'group' : 1,
                     'position' : 0,
@@ -59,8 +59,8 @@ class GshellMenu(gtk.MenuBar):
                 },
                 {
                     'name' : 'Stop',
-                    'action' : self.main_window.menuitem_response,
-                    'data' : None,
+                    'action' : self.gshell.menu_log,
+                    'data' : 'stop',
                     'icon' : None,
                     'group' : 1,
                     'position' : 1,
@@ -70,7 +70,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Exit',
-            'action' : self.main_window.main_window_destroy,
+            'action' : self.gshell.gshell_destroy,
             'data' : None,
             'icon' : gtk.STOCK_QUIT,
             'position' : 0,
@@ -81,7 +81,7 @@ class GshellMenu(gtk.MenuBar):
         menus['Edit'] = (
         {
             'name' : 'Copy',
-            'action' : self.main_window.menu_copy,
+            'action' : self.gshell.menu_copy,
             'data' : None,
             'icon' : gtk.STOCK_COPY,
             'position' : 0,
@@ -90,7 +90,7 @@ class GshellMenu(gtk.MenuBar):
         },
         { 
            'name' : 'Paste',
-            'action' : self.main_window.menu_paste,
+            'action' : self.gshell.menu_paste,
             'data' : None,
             'icon' : gtk.STOCK_PASTE,
             'position' : 1,
@@ -99,7 +99,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Select All',
-            'action' : self.main_window.menu_select_all,
+            'action' : self.gshell.menu_select_all,
             'data' : None,
             'icon' : gtk.STOCK_SELECT_ALL,
             'position' : 0,
@@ -110,7 +110,7 @@ class GshellMenu(gtk.MenuBar):
         menus['Tab'] = (
         {
             'name' : 'New Tab',
-            'action' : self.main_window.new_terminal,
+            'action' : self.gshell.new_terminal,
             'data' : None,
             'icon' : None,
             'position' : 0,
@@ -119,7 +119,7 @@ class GshellMenu(gtk.MenuBar):
         },
         { 
            'name' : 'New Tab Group',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : None,
             'position' : 1,
@@ -128,7 +128,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Arrange',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : None,
             'position' : 2,
@@ -136,7 +136,7 @@ class GshellMenu(gtk.MenuBar):
             'children' : (
                 {
                     'name' : 'Arrange Vertical',
-                    'action' : self.main_window.menuitem_response,
+                    'action' : self.gshell.menuitem_response,
                     'data' : None,
                     'icon' : None,
                     'group' : 1,
@@ -145,7 +145,7 @@ class GshellMenu(gtk.MenuBar):
                 },
                 {
                     'name' : 'Arrange Horizontal',
-                    'action' : self.main_window.menuitem_response,
+                    'action' : self.gshell.menuitem_response,
                     'data' : None,
                     'icon' : None,
                     'group' : 1,
@@ -154,7 +154,7 @@ class GshellMenu(gtk.MenuBar):
                 },
                 {
                     'name' : 'Arrange Tiled',
-                    'action' : self.main_window.menuitem_response,
+                    'action' : self.gshell.menuitem_response,
                     'data' : None,
                     'icon' : None,
                     'group' : 1,
@@ -163,7 +163,7 @@ class GshellMenu(gtk.MenuBar):
                 },
                 {
                     'name' : 'Merge All Tab Groups',
-                    'action' : self.main_window.menuitem_response,
+                    'action' : self.gshell.menuitem_response,
                     'data' : None,
                     'icon' : None,
                     'group' : 2,
@@ -175,7 +175,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Close',
-            'action' : self.main_window.menu_close_tab,
+            'action' : self.gshell.menu_close_tab,
             'data' : 'current',
             'icon' : None,
             'position' : 0,
@@ -184,7 +184,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Close Other Tabs',
-            'action' : self.main_window.menu_close_tab,
+            'action' : self.gshell.menu_close_tab,
             'data' : 'other',
             'icon' : None,
             'position' : 1,
@@ -193,7 +193,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Close All Tabs',
-            'action' : self.main_window.menu_close_tab,
+            'action' : self.gshell.menu_close_tab,
             'data' : 'all',
             'icon' : None,
             'position' : 2,
@@ -202,7 +202,7 @@ class GshellMenu(gtk.MenuBar):
         },
        {
             'name' : 'Zoom In',
-            'action' : self.main_window.menu_zoom_tab,
+            'action' : self.gshell.menu_zoom_tab,
             'data' : 'zoom_in',
             'icon' : gtk.STOCK_ZOOM_IN,
             'position' : 0,
@@ -211,7 +211,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Zoom Out',
-            'action' : self.main_window.menu_zoom_tab,
+            'action' : self.gshell.menu_zoom_tab,
             'data' : 'zoom_out',
             'icon' : gtk.STOCK_ZOOM_OUT,
             'position' : 1,
@@ -220,7 +220,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Zoom Default',
-            'action' : self.main_window.menu_zoom_tab,
+            'action' : self.gshell.menu_zoom_tab,
             'data' : 'zoom_orig',
             'icon' : gtk.STOCK_ZOOM_100,
             'position' : 2,
@@ -231,7 +231,7 @@ class GshellMenu(gtk.MenuBar):
         menus['Tools'] = (
         {
             'name' : 'Scripts',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : None,
             'position' : 0,
@@ -240,7 +240,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'Options',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : gtk.STOCK_PREFERENCES,
             'position' : 0,
@@ -252,7 +252,7 @@ class GshellMenu(gtk.MenuBar):
         menus['Help'] = (
         {
             'name' : 'Help',
-            'action' : self.main_window.menuitem_response,
+            'action' : self.gshell.menuitem_response,
             'data' : None,
             'icon' : gtk.STOCK_HELP,
             'position' : 0,
@@ -261,7 +261,7 @@ class GshellMenu(gtk.MenuBar):
         },
         {
             'name' : 'About',
-            'action' : self.main_window.menu_about,
+            'action' : self.gshell.menu_about,
             'data' : None,
             'icon' : gtk.STOCK_ABOUT,
             'position' : 0,
