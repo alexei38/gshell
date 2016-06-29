@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import gconf
 import os
 import gtk
+import gconf
 from ConfigParser import ConfigParser
 
 DEFAULTS = {
@@ -59,8 +59,9 @@ DEFAULTS = {
 class Config(object):
     def __init__(self, *args, **kwds):
         super(Config, self).__init__(*args, **kwds)
+        self.gconf = gconf.client_get_default()
+        self.gconf_path = lambda x: ('/apps/gshell' + x)
         self.system_font = None
-        self.gconf = None
         self.hosts = []
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
         self.reload_hosts()
@@ -91,11 +92,7 @@ class Config(object):
         """Look up the system font"""
         if self.system_font is not None:
             return self.system_font
-        elif 'gconf' not in globals():
-            return
         else:
-            if self.gconf is None:
-                self.gconf = gconf.client_get_default()
             value = self.gconf.get('/desktop/gnome/interface/monospace_font_name')
             self.system_font = value.get_string()
             return self.system_font

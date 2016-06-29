@@ -3,7 +3,6 @@
 
 import os
 import gtk
-import gobject
 import keybinder
 from config import Config
 from menu import GshellMenu
@@ -25,9 +24,11 @@ class Gshell(object):
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_full_screen = False
-        self.window.set_size_request(1200, 860)
+        self.window.set_size_request(640, 480)
+        self.window.set_resizable(True)
         self.window.set_title("Gshell")
         self.window.set_position(gtk.WIN_POS_CENTER)
+        self.window.set_property('allow-shrink', True)
         self.window.connect("delete_event", self.gshell_destroy)
         self.vbox_main = gtk.VBox()
         self.window.add(self.vbox_main)

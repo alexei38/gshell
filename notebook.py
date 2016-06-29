@@ -16,6 +16,7 @@ class GshellNoteBook(gtk.Notebook):
         self.set_tab_pos(gtk.POS_TOP)
         self.set_scrollable(True)
         self.set_show_tabs(True)
+        self.set_property('homogeneous', True)
         self.search = None
         self.gshell = gshell
         self.config = gshell.config
