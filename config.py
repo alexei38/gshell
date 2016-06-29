@@ -35,6 +35,9 @@ DEFAULTS = {
     'alternate_screen_scroll': True,
     'inactive_color_offset': 0.8,
     'disable_real_transparency' : True,
+    'window_width'          : 0,
+    'window_height'         : 0,
+    'window_maximize'       : True,
     'local_keybinder': {
         ('key_zoom', 'zoom_in')     : ['<Control>equal', '<Control>KP_Add'],
         ('key_zoom', 'zoom_out')    : ['<Control>minus', '<Control>KP_Subtract'],
@@ -66,21 +69,31 @@ class Config(object):
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
         self.reload_hosts()
 
-    def save_window_size(self, scale, state):
-        width, height = scale
-        self.gconf.set_bool(self.gconf_path('/general/window_maximize'), bool(state))
-        self.gconf.set_int(self.gconf_path('/general/window_width'), int(width))
-        self.gconf.set_int(self.gconf_path('/general/window_height'), int(height))
-
-    def get_window_size(self):
-        width = self.gconf.get_int(self.gconf_path('/general/window_width'))
-        height = self.gconf.get_int(self.gconf_path('/general/window_height'))
-        maximize = self.gconf.get_bool(self.gconf_path('/general/window_maximize'))
-        return (width, height, maximize)
-
     def __getitem__(self, key):
-        """Look up a configuration item"""
-        return DEFAULTS.get(key)
+        value = DEFAULTS.get(key)
+        func = None
+        if isinstance(value, int):
+            func = self.gconf.get_int
+        if isinstance(value, bool):
+            func = self.gconf.get_bool
+        if isinstance(value, str):
+            func = self.gconf.get_string
+        if func:
+            check = self.gconf.get(self.gconf_path('/general/' + key))
+            if check:
+                value = func(self.gconf_path('/general/' + key))
+        return value
+
+    def __setitem__(self, key, value):
+        func = None
+        if isinstance(value, int):
+            func = self.gconf.set_int
+        if isinstance(value, bool):
+            func = self.gconf.set_bool
+        if isinstance(value, str):
+            func = self.gconf.set_string
+        if func:
+            func(self.gconf_path('/general/' + key), value)
 
     def reload_hosts(self):
         config_file = os.path.join(self.work_dir, 'hosts.ini')
