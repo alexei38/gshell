@@ -24,6 +24,8 @@ class Gshell(object):
     def build_window(self):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_full_screen = False
+        icon_path = os.path.join(self.config.work_dir, 'icon', 'gshell.svg')
+        self.window.set_icon_from_file(icon_path)
         width = self.config['window_width']
         height = self.config['window_height']
         maximize = self.config['window_maximize']

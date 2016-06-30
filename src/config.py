@@ -67,6 +67,7 @@ class Config(object):
         self.system_font = None
         self.hosts = []
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
+        self.conf_dir = os.path.expanduser('~/.gshell')
         self.reload_hosts()
 
     def __getitem__(self, key):
@@ -96,7 +97,7 @@ class Config(object):
             func(self.gconf_path('/general/' + key), value)
 
     def reload_hosts(self):
-        config_file = os.path.join(self.work_dir, 'hosts.ini')
+        config_file = os.path.join(self.conf_dir, 'hosts.ini')
         if os.path.exists(config_file):
             parser = ConfigParser()
             parser.read(config_file)
