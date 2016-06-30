@@ -175,12 +175,12 @@ class Gshell(object):
                 terminal.search.entry.grab_focus()
 
     def show_hide(self, *args):
-        if not self.window.get_property('visible'):
-            self.window.show()
+        if self.window.window.get_state() & gtk.gdk.WINDOW_STATE_ICONIFIED == gtk.gdk.WINDOW_STATE_ICONIFIED:
+            self.window.window.deiconify()
             self.window.window.focus(0)
             self.set_terminal_focus()
             return
-        self.window.hide()
+        self.window.window.iconify()
 
     def key_zoom(self, zoom):
         def callback(*args):
