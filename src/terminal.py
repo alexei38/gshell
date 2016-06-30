@@ -7,6 +7,7 @@ import pango
 import psutil
 import signal
 import gobject
+from logger import GshellLogger
 
 class GshellTerm(vte.Terminal):
 
@@ -19,7 +20,7 @@ class GshellTerm(vte.Terminal):
         self.page_term = None
         self.seatch = None
         self.scrollbar = None
-        self.logger = None
+        self.logger = GshellLogger(self)
         self.terminal_active = False
         self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
         self.config = gshell.config
@@ -37,6 +38,8 @@ class GshellTerm(vte.Terminal):
         else:
             if command in ['sshpass', 'ssh']:
                 self.terminal_active = True
+                self.mark_close = True
+            print "PID Terminal: %s" % self.pid
 
     def close(self):
         print 'GshellTerm::close called'

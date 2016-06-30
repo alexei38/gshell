@@ -11,6 +11,7 @@ from urlparse import urlparse
 from toolbar import GshellToolbar
 from managehost import ManageHost
 from notebook import GshellNoteBook
+from container import GshellContainer
 
 class Gshell(object):
 
@@ -54,15 +55,26 @@ class Gshell(object):
         self.vbox_main.pack_start(self.toolbar, False, False, 0)
 
         """
-        Notebook
+        Notebook Container
         """
-        self.notebook = GshellNoteBook(self)
-        self.vbox_main.pack_start(self.notebook, True, True, 0)
+        self.container = GshellContainer(self)
+        self.vbox_main.pack_start(self.container, True, True, 0)
+        paned = gtk.VPaned()
+        self.container.pack_start(paned)
+
+        notebook = GshellNoteBook(self)
+        self.container.notebooks.append(notebook)
+        paned.add(notebook)
+        self.container.add_tab(notebook)
+
+        notebook2 = GshellNoteBook(self)
+        self.container.notebooks.append(notebook2)
+        paned.add(notebook2)
+        self.container.add_tab(notebook2)
 
         #self.statusbar = gtk.Statusbar()
         #self.vbox_main.pack_start(self.statusbar, True, True, 0)
         self.hotkeys = GshellKeyBinder(self)
-        self.notebook.add_tab()
         self.window.show_all()
 
     def gshell_destroy(self, *args):
