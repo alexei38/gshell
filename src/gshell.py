@@ -176,9 +176,7 @@ class Gshell(object):
 
     def show_hide(self, *args):
         if not self.window.get_property('visible'):
-            self.hide_gshell = False
             self.window.show()
-            self.window.present()
             self.window.window.focus(0)
             self.set_terminal_focus()
             return
@@ -208,8 +206,12 @@ class Gshell(object):
         self.window.set_full_screen = not self.window.set_full_screen
         if self.window.set_full_screen:
             self.window.fullscreen()
+            self.toolbar.hide()
+            self.menu.hide()
         else:
             self.window.unfullscreen()
+            self.toolbar.show()
+            self.menu.show()
         return True
 
     def key_next_tab(self, *args):

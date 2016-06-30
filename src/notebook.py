@@ -160,7 +160,8 @@ class GshellNoteBook(gtk.Notebook):
         vbox.pack_start(hbox, True, True)
         self.terminal.search = GshellSearch(self.terminal)
         vbox.pack_start(self.terminal.search, False, False, 5)
-        self.scrollbar = gtk.VScrollbar(self.terminal.get_adjustment())
+        adj = self.terminal.get_adjustment()
+        self.scrollbar = gtk.VScrollbar(adj)
         self.terminal.scrollbar = self.scrollbar
         self.scrollbar.set_no_show_all(True)
         self.scrollbar_position = self.config['scrollbar_position']

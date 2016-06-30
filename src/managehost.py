@@ -14,6 +14,7 @@ class ManageHost(gtk.Window):
         self.connect("delete_event", self.on_exit)
         self.connect("key-press-event",self._key_press_event)
         self.build_window()
+        self.window.focus(0)
 
     def on_exit(self, *args):
         self.destroy()
