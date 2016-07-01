@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import gobject
 import os
 import gtk
 import keybinder
@@ -90,12 +91,6 @@ class Gshell(object):
             gtk.main_quit(*args)
             return False
 
-    def set_terminal_focus(self):
-        terminal = self.notebook.get_current_terminal()
-        if terminal:
-            terminal.grab_focus()
-        return terminal
-
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
 
@@ -175,10 +170,12 @@ class Gshell(object):
                 terminal.search.entry.grab_focus()
 
     def show_hide(self, *args):
-        if self.window.window.get_state() & gtk.gdk.WINDOW_STATE_ICONIFIED == gtk.gdk.WINDOW_STATE_ICONIFIED:
+        active_window = self.window.window.get_screen().get_active_window()
+        terminal = self.notebook.get_current_terminal()
+        if (self.window.window.get_state() & gtk.gdk.WINDOW_STATE_ICONIFIED) or (active_window != self.window.window):
             self.window.window.deiconify()
             self.window.window.focus(0)
-            self.set_terminal_focus()
+            terminal.grab_focus()
             return
         self.window.window.iconify()
 

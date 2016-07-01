@@ -120,5 +120,9 @@ class Config(object):
             return self.system_font
         else:
             value = self.gconf.get('/desktop/gnome/interface/monospace_font_name')
-            self.system_font = value.get_string()
+            if value:
+                self.system_font = value.get_string()
+            else:
+                # FIX. if not key in gconf
+                self.system_font = self['font']
             return self.system_font
