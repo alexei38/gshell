@@ -45,6 +45,7 @@ class GshellNoteBook(gtk.Notebook):
                 title = title + ' '
             self.label = GshellTabLabel(title, self)
             self.terminal.label = self.label
+            self.terminal.notebook = self
             self.label.terminal = self.terminal
             self.label.connect('close-clicked', self.close_tab)
             self.terminal.connect('child-exited', self.on_terminal_exit, {'terminalbox' : self.terminalbox, 'label' : self.label, 'terminal' : self.terminal})
@@ -175,3 +176,8 @@ class GshellNoteBook(gtk.Notebook):
         func(self.scrollbar, False)
         hbox.show_all()
         return vbox
+
+    def all_emit(self, terminal, type, event):
+        for term in self.get_all_terminals():
+            if term != terminal and term.broadcast:
+                term.emit(type, event)

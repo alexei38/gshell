@@ -2,6 +2,7 @@
 import gtk
 import gobject
 from editablelabel import EditableLabel
+from menu import GshellPopupMenu
 
 class GshellTabLabel(gtk.HBox):
 
@@ -12,11 +13,36 @@ class GshellTabLabel(gtk.HBox):
     def __init__(self, title, notebook):
         gtk.HBox.__init__(self)
         self.notebook = notebook
+        self.terminal = None
         self.label = EditableLabel(title)
         self.update_angle()
         self.pack_start(self.label, True, True)
         self.update_button()
+        self.popupmenu = GshellPopupMenu(self)
+        self.connect('button-press-event', self.show_popupmenu)
         self.show_all()
+
+    def show_popupmenu(self, widget, event):
+        if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3 and self.terminal:
+            self.popupmenu.enable_broadcast.set_active(self.terminal.broadcast)
+            self.popupmenu.enable_log.set_active(self.terminal.logger and self.terminal.logger.logging)
+            self.popupmenu.show_all()
+            self.popupmenu.popup(None, None, None, event.button, event.time)
+        return False
+
+    def enable_broadcast(self, widget, *args):
+        if self.terminal:
+            self.terminal.broadcast = not self.terminal.broadcast
+
+    def enable_log(self, widget, *args):
+        if self.terminal and self.terminal.logger:
+            if self.terminal.logger.logging:
+                self.terminal.logger.stop_logger()
+            else:
+                if self.terminal.host and self.terminal.host['log']:
+                    self.terminal.logger.start_logger(self.terminal.host['log'])
+                else:
+                    self.terminal.logger.start_logger()
 
     def update_button(self):
         self.button = gtk.Button()

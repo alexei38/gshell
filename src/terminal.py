@@ -20,7 +20,9 @@ class GshellTerm(vte.Terminal):
         self.seatch = None
         self.scrollbar = None
         self.logger = None
+        self.notebook = None
         self.terminal_active = False
+        self.broadcast = False
         self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
         self.config = gshell.config
         self.gshell = gshell
@@ -207,9 +209,17 @@ class GshellTerm(vte.Terminal):
 
         self.connect('focus-in-event', self.on_terminal_focus_in)
         self.connect('focus-out-event', self.on_terminal_focus_out)
+        self.connect('key-press-event', self.on_keypress)
 
         self.queue_draw()
         return False
+
+    def on_keypress(self, widget, event):
+        if not event:
+            return False
+        if self.broadcast and self.is_focus():
+            self.notebook.all_emit(self, 'key-press-event', event)
+            return False
 
     def on_terminal_focus_in(self, *args):
         if self:

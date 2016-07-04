@@ -298,3 +298,16 @@ class GshellMenu(gtk.MenuBar):
             if len(menu_groups) > 1 and menus != menu_groups[-1]:
                 separator = gtk.SeparatorMenuItem()
                 parent.add(separator)
+
+class GshellPopupMenu(gtk.Menu):
+
+    def __init__(self, tablabel):
+        super(GshellPopupMenu, self).__init__()
+        self.tablabel = tablabel
+        self.enable_broadcast = gtk.CheckMenuItem('Enable Broadcast')
+        self.enable_broadcast.connect('activate', self.tablabel.enable_broadcast)
+        self.append(self.enable_broadcast)
+
+        self.enable_log = gtk.CheckMenuItem('Enable log')
+        self.enable_log.connect('activate', self.tablabel.enable_log)
+        self.append(self.enable_log)
