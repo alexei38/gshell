@@ -10,6 +10,11 @@ import gobject
 
 class GshellTerm(vte.Terminal):
 
+    __gsignals__ = {
+        'enable-broadcast': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,(gobject.TYPE_OBJECT,)),
+    }
+
+
     def __init__(self, gshell, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
         self.mark_close = False
@@ -210,6 +215,7 @@ class GshellTerm(vte.Terminal):
         self.connect('focus-in-event', self.on_terminal_focus_in)
         self.connect('focus-out-event', self.on_terminal_focus_out)
         self.connect('key-press-event', self.on_keypress)
+        self.connect('enable-broadcast', self.enable_broadcast)
 
         self.queue_draw()
         return False
@@ -230,3 +236,16 @@ class GshellTerm(vte.Terminal):
         if self:
             self.set_colors(self.fgcolor_inactive, self.bgcolor, self.palette_inactive)
         return False
+
+    def enable_broadcast(self, *args):
+        self.broadcast = not self.broadcast
+        if self.broadcast:
+            self.label.broadcast_image = gtk.Image()
+            broadcast_icon_file = os.path.join(self.config.work_dir, 'icon/broadcast.png')
+            broadcast_icon = gtk.gdk.pixbuf_new_from_file_at_size(broadcast_icon_file, 20, 20)
+            self.label.broadcast_image.set_from_pixbuf(broadcast_icon)
+            self.label.broadcast_image.show()
+            self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 3)
+        else:
+            if isinstance(self.label.broadcast_image, gtk.Image):
+                self.label.broadcast_image.destroy()

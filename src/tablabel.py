@@ -3,6 +3,7 @@ import gtk
 import gobject
 from editablelabel import EditableLabel
 from menu import GshellPopupMenu
+from config import Config
 
 class GshellTabLabel(gtk.HBox):
 
@@ -13,9 +14,13 @@ class GshellTabLabel(gtk.HBox):
     def __init__(self, title, notebook):
         gtk.HBox.__init__(self)
         self.notebook = notebook
+        self.config = Config()
         self.terminal = None
         self.label = EditableLabel(title)
         self.update_angle()
+        self.label.broadcast_image = None
+        self.prefix_box = gtk.HBox()
+        self.pack_start(self.prefix_box, False, False)
         self.pack_start(self.label, True, True)
         self.update_button()
         self.popupmenu = GshellPopupMenu(self)
@@ -32,7 +37,7 @@ class GshellTabLabel(gtk.HBox):
 
     def enable_broadcast(self, widget, *args):
         if self.terminal:
-            self.terminal.broadcast = not self.terminal.broadcast
+            self.terminal.emit('enable-broadcast', self)
 
     def enable_log(self, widget, *args):
         if self.terminal and self.terminal.logger:
