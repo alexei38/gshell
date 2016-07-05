@@ -17,6 +17,8 @@ if type docker >/dev/null 2>&1 ; then
                                             cp /src/src/icon/gshell.png /build/gshell/usr/share/icons/; \
                                             cp -r /src/src /build/gshell/usr/share/gshell; \
                                             cd /build/gshell; \
+                                            version=$(cd /src/; git describe); \
+                                            sed -i "s/VERSION/$version/g" DEBIAN/control; \
                                             md5deep -r usr > DEBIAN/md5sums; \
                                             cd /build; \
                                             fakeroot dpkg-deb --build gshell /src/'

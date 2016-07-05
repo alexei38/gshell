@@ -3,4 +3,5 @@ Name=Gshell
 Exec=/usr/share/gshell/gshell
 Icon=gshell
 Type=Application
-Categories=Utility;Development;
+Categories=GNOME;GTK;Utility;TerminalEmulator;System;
+Keywords=terminal;shell;prompt;command;

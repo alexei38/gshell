@@ -1,5 +1,5 @@
 Package: gshell
-Version: 0.0.1
+Version: VERSION
 Section: utility
 Architecture: all
 Depends: python-vte, sshpass, python-keybinder, python-psutil
