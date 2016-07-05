@@ -64,7 +64,16 @@ class ManageHost(gtk.Window):
             else:
                 groups.append(name)
         hosts = [host for host in self.config.hosts if host['uuid'] in uuids]
-        group_hosts = [host for host in self.config.hosts if host['group'] in groups]
+        searchtext = self.entry.get_text()
+        if len(searchtext) >= 2:
+            search = searchtext.decode('utf-8').lower()
+            group_hosts = []
+            for host in self.config.hosts:
+                if [v for v in host.values()
+                       if search in v.decode('utf-8').lower()]:
+                    group_hosts.append(host)
+        else:
+            group_hosts = [host for host in self.config.hosts if host['group'] in groups]
         return (hosts, group_hosts)
 
     def on_key_entry(self, *args):
