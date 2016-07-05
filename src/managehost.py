@@ -67,18 +67,16 @@ class ManageHost(gtk.Window):
         group_hosts = [host for host in self.config.hosts if host['group'] in groups]
         return (hosts, group_hosts)
 
-    def search(self, model, column, key, iter, data):
-        print 'ManageHost::search called'
-        name = model.get_value(iter, 1).lower()
-        if name != '' and key.lower() in name:
-            return False
-        host = model.get_value(iter, 2).lower()
-        if host != '' and key.lower() in host:
-            return False
-        username = model.get_value(iter, 3).lower()
-        if username != '' and key.lower() in username:
-            return False
-        return True
+    def on_key_entry(self, *args):
+        gobject.timeout_add(50, self.search)
+
+    def search(self):
+        searchtext = self.entry.get_text()
+        if len(searchtext) >= 2:
+            self.rebuild_host_store(searchtext.decode('utf-8').lower())
+        else:
+            self.rebuild_host_store()
+
 
     def build_window(self):
         self.set_size_request(700, 450)
@@ -132,19 +130,17 @@ class ManageHost(gtk.Window):
         self.vbox.pack_start(hbox, False, False, 5)
         hbox.pack_start(gtk.Label('Search: '), False, False, 5)
         self.entry = gtk.Entry()
+        self.entry.connect('key-press-event', self.on_key_entry)
         self.entry.set_size_request(250, -1)
         hbox.pack_start(self.entry, False, False, 0)
 
         """ Host List """
-        store = gtk.TreeStore(gtk.gdk.Pixbuf, str, str, str, str, str)
-        tree_model = gtk.TreeModelSort(store)
+        self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, str, str, str, str)
+        tree_model = gtk.TreeModelSort(self.store)
         self.tree = gtk.TreeView(tree_model)
 
         self.tree.connect('row-activated', self.on_connect)
         self.tree.connect('cursor-changed', self.on_cursor_changed)
-
-        self.tree.set_search_entry(self.entry)
-        self.tree.set_search_equal_func(self.search, None)
 
         self.tree.set_rubber_banding(True)
         self.treeselection = self.tree.get_selection()
@@ -184,23 +180,30 @@ class ManageHost(gtk.Window):
         column.set_visible(False)
         self.tree.append_column(column)
 
-        host_groups = {}
-        for host in self.gshell.config.hosts:
-            group = host['group']
-            host_addr = '%s:%s' % (host['host'], host['port'])
-            if group not in host_groups:
-                icon_file = os.path.join(self.gshell.config.work_dir, 'icon/cubes.png')
-                icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 20, 20)
-                host_groups[group] = store.append(None, [icon, group, '','','', ''])
-            icon_file = os.path.join(self.gshell.config.work_dir, 'icon/connect.png')
-            icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 20, 20)
-            store.append(host_groups[group], (icon, host['name'], host_addr, host['username'], host['description'], host['uuid']))
-
         scroll = gtk.ScrolledWindow()
         scroll.add(self.tree)
         self.vbox.pack_start(scroll, True, True, 0)
 
         """ Run """
         self.show_all()
-        self.tree.expand_all()
+        self.rebuild_host_store()
         self.tree.grab_focus()
+
+    def rebuild_host_store(self, search=None):
+        self.store.clear()
+        host_groups = {}
+        for host in self.gshell.config.hosts:
+            group = host['group']
+            host_addr = '%s:%s' % (host['host'], host['port'])
+            if search:
+                search = search.decode('utf-8').lower()
+                if not [v for v in host.values() if search in v.decode('utf-8').lower()]:
+                    continue
+            if group not in host_groups:
+                icon_file = os.path.join(self.gshell.config.work_dir, 'icon/cubes.png')
+                icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 20, 20)
+                host_groups[group] = self.store.append(None, [icon, group, '','','', ''])
+            icon_file = os.path.join(self.gshell.config.work_dir, 'icon/connect.png')
+            icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 20, 20)
+            self.store.append(host_groups[group], (icon, host['name'], host_addr, host['username'], host['description'], host['uuid']))
+        self.tree.expand_all()
