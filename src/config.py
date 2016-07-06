@@ -70,6 +70,7 @@ class Config(object):
         self.system_font = None
         self.hosts = []
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
+        self.get_icon = lambda icon: os.path.join(self.work_dir, 'icon', icon)
         self.conf_dir = os.path.expanduser('~/.gshell')
         self.host_file = os.path.join(self.conf_dir, 'hosts.ini')
         self.host_file_backup = os.path.join(self.conf_dir, 'hosts.bck')

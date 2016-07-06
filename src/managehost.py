@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import os
 import gtk
 import gobject
 import pango
@@ -239,10 +238,10 @@ class ManageHost(gtk.Window):
                            if search in v.decode('utf-8').lower()]:
                     continue
             if group not in host_groups:
-                icon_file = os.path.join(self.gshell.config.work_dir, 'icon/cubes.png')
+                icon_file = self.gshell.config.get_icon('cubes.png')
                 icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 15, 15)
                 host_groups[group] = self.store.append(None, [icon, group, '','','', ''])
-            icon_file = os.path.join(self.gshell.config.work_dir, 'icon/connect.png')
+            icon_file = self.gshell.config.get_icon('connect.png')
             icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 15, 15)
             self.store.append(host_groups[group], (icon, host['name'], host_addr, host['username'], host['description'], host['uuid']))
         self.tree.expand_all()

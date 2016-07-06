@@ -180,14 +180,13 @@ class GshellMenu(gtk.MenuBar):
 
 class GshellPopupMenu(gtk.Menu):
 
-    def __init__(self, terminal, tablabel, notebook):
+    def __init__(self, tablabel, notebook):
         super(GshellPopupMenu, self).__init__()
         self.tablabel = tablabel
-        self.terminal = terminal
         self.notebook = notebook
-        self.enable_broadcast = gtk.CheckMenuItem('Enable Broadcast')
-        self.enable_broadcast.connect('activate', self.tablabel.enable_broadcast)
-        self.insert(self.enable_broadcast, -1)
+        self.terminal_broadcast = gtk.CheckMenuItem('Enable Broadcast')
+        self.terminal_broadcast.connect('activate', self.tablabel.enable_broadcast)
+        self.insert(self.terminal_broadcast, -1)
 
         self.enable_log = gtk.CheckMenuItem('Enable log')
         self.enable_log.connect('activate', self.tablabel.enable_log)
