@@ -242,10 +242,10 @@ class GshellTerm(vte.Terminal):
         if self.broadcast:
             self.label.broadcast_image = gtk.Image()
             broadcast_icon_file = os.path.join(self.config.work_dir, 'icon/broadcast.png')
-            broadcast_icon = gtk.gdk.pixbuf_new_from_file_at_size(broadcast_icon_file, 20, 20)
+            broadcast_icon = gtk.gdk.pixbuf_new_from_file_at_size(broadcast_icon_file, 18, 18)
             self.label.broadcast_image.set_from_pixbuf(broadcast_icon)
             self.label.broadcast_image.show()
-            self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 3)
+            self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 1)
         else:
             if isinstance(self.label.broadcast_image, gtk.Image):
                 self.label.broadcast_image.destroy()
