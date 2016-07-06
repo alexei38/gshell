@@ -2,8 +2,11 @@
 
 import os
 import gtk
+import uuid
 import gconf
+import shutil
 from ConfigParser import ConfigParser
+from ConfigParser import NoOptionError
 
 DEFAULTS = {
     'allow_bold'            : True,
@@ -68,6 +71,8 @@ class Config(object):
         self.hosts = []
         self.work_dir = os.path.dirname(os.path.realpath(__file__))
         self.conf_dir = os.path.expanduser('~/.gshell')
+        self.host_file = os.path.join(self.conf_dir, 'hosts.ini')
+        self.host_file_backup = os.path.join(self.conf_dir, 'hosts.bck')
         self.reload_hosts()
 
     def __getitem__(self, key):
@@ -97,22 +102,79 @@ class Config(object):
             func(self.gconf_path('/general/' + key), value)
 
     def reload_hosts(self):
-        config_file = os.path.join(self.conf_dir, 'hosts.ini')
-        if os.path.exists(config_file):
+        def get_section(parser, section, key, default=''):
+            try:
+                val = parser.get(section, key)
+                if not val:
+                    return default
+                return val
+            except NoOptionError:
+                return default
+        self.hosts = []
+        if os.path.exists(self.host_file):
             parser = ConfigParser()
-            parser.read(config_file)
+            parser.read(self.host_file)
             for section in parser.sections():
                 self.hosts.append({
                     'uuid' : section,
-                    'name' : parser.get(section, 'name'),
-                    'host' : parser.get(section, 'host'),
-                    'port' : parser.get(section, 'port'),
-                    'username' : parser.get(section, 'username'),
-                    'password' : parser.get(section, 'password'),
-                    'group' : parser.get(section, 'group'),
-                    'description' : parser.get(section, 'description'),
-                    'log' : parser.get(section, 'log'),
+                    'name' : get_section(parser, section, 'name'),
+                    'host' : get_section(parser, section, 'host'),
+                    'port' : get_section(parser, section, 'port', '22'),
+                    'username' : get_section(parser, section, 'username'),
+                    'password' : get_section(parser, section, 'password'),
+                    'group' : get_section(parser, section, 'group'),
+                    'description' : get_section(parser, section, 'description'),
+                    'log' : get_section(parser, section, 'log'),
+                    'ssh_options' : get_section(parser, section, 'ssh_options'),
+                    'start_commands' : get_section(parser, section, 'start_commands'),
                 })
+
+    def save_host(self, new_host):
+        if not new_host['uuid']:
+            new_host['uuid'] = str(uuid.uuid4())
+        if os.path.exists(self.host_file_backup):
+            os.remove(self.host_file_backup)
+        if os.path.exists(self.host_file):
+            shutil.copy(self.host_file, self.host_file_backup)
+        parser = ConfigParser()
+        host_saved = False
+        for host in self.hosts:
+            if host['uuid'] == new_host['uuid']:
+                host = new_host
+                host_saved = True
+            self.add_host_section(parser, host)
+        if not host_saved:
+            self.add_host_section(parser, new_host)
+        fp = open(self.host_file, 'w')
+        parser.write(fp)
+        fp.close()
+        self.reload_hosts()
+
+    def remove_host(self, remove_host):
+        if remove_host not in self.hosts:
+            return
+        if os.path.exists(self.host_file_backup):
+            os.remove(self.host_file_backup)
+        if os.path.exists(self.host_file):
+            shutil.copy(self.host_file, self.host_file_backup)
+        parser = ConfigParser()
+        for host in self.hosts:
+            if host == remove_host:
+                continue
+            self.add_host_section(parser, host)
+        fp = open(self.host_file, 'w')
+        parser.write(fp)
+        fp.close()
+        self.reload_hosts()
+
+    @staticmethod
+    def add_host_section(parser, host):
+        if host['host']:
+            if not host['name']:
+                host['name'] = host['host']
+            parser.add_section(host['uuid'])
+            for key in ['name', 'host', 'port', 'username', 'password', 'group', 'description', 'log', 'ssh_options', 'start_commands']:
+                parser.set(host['uuid'], key, host[key])
 
     def get_system_font(self):
         """Look up the system font"""
