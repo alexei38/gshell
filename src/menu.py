@@ -107,127 +107,6 @@ class GshellMenu(gtk.MenuBar):
             'children' : None
         })
 
-        menus['Tab'] = (
-        {
-            'name' : 'New Tab',
-            'action' : self.gshell.new_terminal,
-            'data' : None,
-            'icon' : None,
-            'position' : 0,
-            'group' : 1,
-            'children' : None
-        },
-        { 
-           'name' : 'New Tab Group',
-            'action' : self.gshell.menuitem_response,
-            'data' : None,
-            'icon' : None,
-            'position' : 1,
-            'group' : 1,
-            'children' : None
-        },
-        {
-            'name' : 'Arrange',
-            'action' : self.gshell.menuitem_response,
-            'data' : None,
-            'icon' : None,
-            'position' : 2,
-            'group' : 1,
-            'children' : (
-                {
-                    'name' : 'Arrange Vertical',
-                    'action' : self.gshell.menuitem_response,
-                    'data' : None,
-                    'icon' : None,
-                    'group' : 1,
-                    'position' : 0,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Arrange Horizontal',
-                    'action' : self.gshell.menuitem_response,
-                    'data' : None,
-                    'icon' : None,
-                    'group' : 1,
-                    'position' : 1,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Arrange Tiled',
-                    'action' : self.gshell.menuitem_response,
-                    'data' : None,
-                    'icon' : None,
-                    'group' : 1,
-                    'position' : 2,
-                    'children' : None,
-                },
-                {
-                    'name' : 'Merge All Tab Groups',
-                    'action' : self.gshell.menuitem_response,
-                    'data' : None,
-                    'icon' : None,
-                    'group' : 2,
-                    'position' : 0,
-                    'children' : None,
-                },
-
-            )
-        },
-        {
-            'name' : 'Close',
-            'action' : self.gshell.menu_close_tab,
-            'data' : 'current',
-            'icon' : None,
-            'position' : 0,
-            'group' : 2,
-            'children' : None
-        },
-        {
-            'name' : 'Close Other Tabs',
-            'action' : self.gshell.menu_close_tab,
-            'data' : 'other',
-            'icon' : None,
-            'position' : 1,
-            'group' : 2,
-            'children' : None
-        },
-        {
-            'name' : 'Close All Tabs',
-            'action' : self.gshell.menu_close_tab,
-            'data' : 'all',
-            'icon' : None,
-            'position' : 2,
-            'group' : 2,
-            'children' : None
-        },
-       {
-            'name' : 'Zoom In',
-            'action' : self.gshell.menu_zoom_tab,
-            'data' : 'zoom_in',
-            'icon' : gtk.STOCK_ZOOM_IN,
-            'position' : 0,
-            'group' : 3,
-            'children' : None
-        },
-        {
-            'name' : 'Zoom Out',
-            'action' : self.gshell.menu_zoom_tab,
-            'data' : 'zoom_out',
-            'icon' : gtk.STOCK_ZOOM_OUT,
-            'position' : 1,
-            'group' : 3,
-            'children' : None
-        },
-        {
-            'name' : 'Zoom Default',
-            'action' : self.gshell.menu_zoom_tab,
-            'data' : 'zoom_orig',
-            'icon' : gtk.STOCK_ZOOM_100,
-            'position' : 2,
-            'group' : 3,
-            'children' : None
-        })
-
         menus['Tools'] = (
         {
             'name' : 'Scripts',
@@ -301,13 +180,31 @@ class GshellMenu(gtk.MenuBar):
 
 class GshellPopupMenu(gtk.Menu):
 
-    def __init__(self, tablabel):
+    def __init__(self, terminal, tablabel, notebook):
         super(GshellPopupMenu, self).__init__()
         self.tablabel = tablabel
+        self.terminal = terminal
+        self.notebook = notebook
         self.enable_broadcast = gtk.CheckMenuItem('Enable Broadcast')
         self.enable_broadcast.connect('activate', self.tablabel.enable_broadcast)
-        self.append(self.enable_broadcast)
+        self.insert(self.enable_broadcast, -1)
 
         self.enable_log = gtk.CheckMenuItem('Enable log')
         self.enable_log.connect('activate', self.tablabel.enable_log)
-        self.append(self.enable_log)
+        self.insert(self.enable_log, -1)
+
+        self.insert(gtk.SeparatorMenuItem(), -1)
+
+        self.close_tab = gtk.CheckMenuItem('Close This Tab')
+        self.close_tab.connect('activate', self.notebook.close_tabs, tablabel, 'current')
+        self.insert(self.close_tab, -1)
+
+        self.close_other_tabs = gtk.CheckMenuItem('Close Other Tabs')
+        self.close_other_tabs.connect('activate', self.notebook.close_tabs, tablabel, 'other')
+        self.insert(self.close_other_tabs, -1)
+
+        self.close_all_tabs = gtk.CheckMenuItem('Close All Tabs')
+        self.close_all_tabs.connect('activate', self.notebook.close_tabs, tablabel, 'all')
+        self.insert(self.close_all_tabs, -1)
+
+        self.insert(gtk.SeparatorMenuItem(), -1)

@@ -101,36 +101,32 @@ class ManageHost(gtk.Window):
         toolbar.set_style(gtk.TOOLBAR_BOTH)
 
         self.new_button = gtk.ToolButton(gtk.STOCK_ADD)
-        self.new_button.set_label("Add")
-        self.new_button.set_sensitive(True)
-        self.new_button.set_size_request(60, 50)
         self.new_button.connect('clicked', self.gshell.menuitem_response)
-        toolbar.append_widget(self.new_button, "Add", "Add")
+        self.new_button.set_tooltip(gtk.Tooltips(), 'Add')
+        self.new_button.set_label("Add")
+        toolbar.insert(self.new_button, -1)
 
         self.edit_button = gtk.ToolButton(gtk.STOCK_EDIT)
-        self.edit_button.set_label("Edit")
-        self.edit_button.set_sensitive(False)
-        self.edit_button.set_size_request(60, 50)
         self.edit_button.connect('clicked', self.gshell.menuitem_response)
-        toolbar.append_widget(self.edit_button, "Edit", "Edit")
+        self.edit_button.set_tooltip(gtk.Tooltips(), 'Edit')
+        self.edit_button.set_label("Edit")
+        toolbar.insert(self.edit_button, -1)
 
         self.remove_button = gtk.ToolButton(gtk.STOCK_ADD)
         self.remove_button.set_label("Remove")
-        self.remove_button.set_sensitive(False)
-        self.remove_button.set_size_request(60, 50)
+        self.remove_button.set_tooltip(gtk.Tooltips(), 'Remove')
         self.remove_button.connect('clicked', self.gshell.menuitem_response)
-        toolbar.append_widget(self.remove_button, "Remove", "Remove")
+        toolbar.insert(self.remove_button, -1)
 
-        toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
+        toolbar.insert(gtk.SeparatorToolItem(), -1)
 
         self.connect_button = gtk.ToolButton(gtk.STOCK_CONNECT)
         self.connect_button.set_label("Connect")
-        self.connect_button.set_sensitive(True)
-        self.connect_button.set_size_request(60, 50)
+        self.connect_button.set_tooltip(gtk.Tooltips(), 'Connect')
         self.connect_button.connect('clicked', self.on_connect)
-        toolbar.append_widget(self.connect_button, "Connect", "Connect")
+        toolbar.insert(self.connect_button, -1)
 
-        toolbar.append_widget(gtk.SeparatorToolItem(), None, None)
+        toolbar.insert(gtk.SeparatorToolItem(), -1)
 
         self.vbox.pack_start(toolbar, False, False, 0)
 

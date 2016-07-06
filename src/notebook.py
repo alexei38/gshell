@@ -97,12 +97,9 @@ class GshellNoteBook(gtk.Notebook):
         current_page = self.get_current_page()
         return self.get_terminal_by_page(current_page)
 
-    def get_all_terminals(self, exclude_current_page=False):
+    def get_all_terminals(self):
         terminals = []
-        current_page = self.get_current_page()
         for i in xrange(0, self.get_n_pages() + 1):
-            if i == current_page and exclude_current_page:
-                continue
             term = self.get_terminal_by_page(i)
             if term:
                 terminals.append(term)
@@ -129,30 +126,47 @@ class GshellNoteBook(gtk.Notebook):
 
     def close_tab(self, widget, label):
         print 'GshellNoteBook::close_tab called'
-        tabnum = -1
+        terminal, page = self.get_terminal_by_label(label)
+        if terminal:
+            if terminal.terminal_active:
+                dialog = gtk.MessageDialog(self.gshell.window, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, "This terminal is active?\nAre you sure you want to close?")
+                response = dialog.run()
+                dialog.destroy()
+                if response == gtk.RESPONSE_YES:
+                    self.remove_page(page)
+                    terminal.close()
+                    terminal.destroy()
+                    label.destroy()
+                    self.gshell.switch_toolbar_sensitive()
+            else:
+                self.remove_page(page)
+                terminal.close()
+                terminal.destroy()
+                label.destroy()
+                self.gshell.switch_toolbar_sensitive()
+
+    def close_tabs(self, widget, label, data=None):
+        current_terminal, page = self.get_terminal_by_label(label)
+        if data == 'current':
+            current_terminal.mark_close = False
+            current_terminal.close()
+        else:
+            for terminal in self.get_all_terminals():
+                if data == 'other' and terminal == current_terminal:
+                    continue
+                terminal.mark_close = False
+                terminal.close()
+
+    def get_terminal_by_label(self, label):
+        page = -1
+        terminal = None
         for i in xrange(0, self.get_n_pages() + 1):
             if label == self.get_tab_label(self.get_nth_page(i)):
-                tabnum = i
+                page = i
                 break
-        if tabnum != -1:
-            term = self.get_terminal_by_page(tabnum)
-            if term:
-                if term.terminal_active:
-                    dialog = gtk.MessageDialog(self.gshell.window, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, "This terminal is active?\nAre you sure you want to close?")
-                    response = dialog.run()
-                    dialog.destroy()
-                    if response == gtk.RESPONSE_YES:
-                        term.close()
-                        term.destroy()
-                        label.destroy()
-                        self.remove_page(tabnum)
-                        self.gshell.switch_toolbar_sensitive()
-                else:
-                    term.close()
-                    term.destroy()
-                    label.destroy()
-                    self.remove_page(tabnum)
-                    self.gshell.switch_toolbar_sensitive()
+        if page != -1:
+            terminal = self.get_terminal_by_page(page)
+        return (terminal, page)
 
     def create_terminalbox(self):
         print 'GshellNoteBook::create_terminalbox called'

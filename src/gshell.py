@@ -60,8 +60,6 @@ class Gshell(object):
         self.notebook = GshellNoteBook(self)
         self.vbox_main.pack_start(self.notebook, True, True, 0)
 
-        #self.statusbar = gtk.Statusbar()
-        #self.vbox_main.pack_start(self.statusbar, True, True, 0)
         self.hotkeys = GshellKeyBinder(self)
         self.notebook.add_tab()
         self.window.show_all()
@@ -134,17 +132,6 @@ class Gshell(object):
         if terminal:
             terminal.paste_clipboard()
         return True
-
-    def menu_close_tab(self, widget, data=None):
-        terminals = []
-        if data == 'current':
-            terminals.append(self.notebook.get_current_terminal())
-        if data == 'other':
-            terminals += self.notebook.get_all_terminals(exclude_current_page=True)
-        if data == 'all':
-            terminals += self.notebook.get_all_terminals()
-        for terminal in terminals:
-            terminal.close()
 
     def menu_zoom_tab(self, widget, data=None):
         terminal = self.notebook.get_current_terminal()
@@ -257,14 +244,6 @@ class Gshell(object):
         names = [
             'Log',
             'Edit',
-            'New Tab Group',
-            'Arrange',
-            'Close',
-            'Close All Tabs',
-            'Close Other Tabs',
-            'Zoom In',
-            'Zoom Out',
-            'Zoom Default',
         ]
         self.change_menu_sensitive(self.menu, names, bool(terminal))
 
