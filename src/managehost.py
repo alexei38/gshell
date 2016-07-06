@@ -224,6 +224,7 @@ class ManageHost(gtk.Window):
         """ Run """
         self.show_all()
         self.rebuild_host_store()
+        self.on_cursor_changed()
         self.tree.grab_focus()
 
     def rebuild_host_store(self):
@@ -325,7 +326,8 @@ class GshellHost(gtk.Dialog):
         password_label = gtk.Label('Password')
         self.password_input = gtk.Entry()
         if self.host and self.host['password']:
-            self.password_input.set_text(self.host['password'])
+            password = self.config.decrypt_password(self.host)
+            self.password_input.set_text(password)
         self.password_input.set_visibility(False)
         table.attach(password_label, 0, 1, 5, 6, xpadding=15, ypadding=5)
         table.attach(self.password_input, 1, 2, 5, 6, xpadding=15, ypadding=5)

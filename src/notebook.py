@@ -61,7 +61,8 @@ class GshellNoteBook(gtk.Notebook):
         print 'GshellNoteBook::new_tab_by_host called'
         argv = []
         envv = []
-        if host['password']:
+        password = self.config.decrypt_password(host)
+        if password:
             command = 'sshpass'
             argv += ['sshpass']
         else:
@@ -77,8 +78,8 @@ class GshellNoteBook(gtk.Notebook):
         if host['log']:
             terminal.logger.start_logger(host['log'])
         self.gshell.switch_toolbar_sensitive(terminal)
-        if host['password']:
-            terminal.send_data(data=host['password'], timeout=2000, reset=True)
+        if password:
+            terminal.send_data(data=password, timeout=2000, reset=True)
 
     def get_terminal_by_page(self, tabnum):
         tab_parent = self.get_nth_page(tabnum)

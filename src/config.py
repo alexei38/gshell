@@ -5,6 +5,9 @@ import gtk
 import uuid
 import gconf
 import shutil
+import base64
+from Crypto import Random
+from AESCipher import AESCipher
 from ConfigParser import ConfigParser
 from ConfigParser import NoOptionError
 
@@ -128,11 +131,14 @@ class Config(object):
                     'log' : get_section(parser, section, 'log'),
                     'ssh_options' : get_section(parser, section, 'ssh_options'),
                     'start_commands' : get_section(parser, section, 'start_commands'),
+                    'key' : get_section(parser, section, 'key', base64.encodestring(Random.new().read(32)).strip())
                 })
 
     def save_host(self, new_host):
         if not new_host['uuid']:
             new_host['uuid'] = str(uuid.uuid4())
+        if 'key' not in new_host:
+            new_host['key'] = base64.encodestring(Random.new().read(32)).strip()
         if os.path.exists(self.host_file_backup):
             os.remove(self.host_file_backup)
         if os.path.exists(self.host_file):
@@ -143,8 +149,10 @@ class Config(object):
             if host['uuid'] == new_host['uuid']:
                 host = new_host
                 host_saved = True
+                host['password'] = self.encrypt_password(host)
             self.add_host_section(parser, host)
         if not host_saved:
+            new_host['password'] = self.encrypt_password(new_host)
             self.add_host_section(parser, new_host)
         fp = open(self.host_file, 'w')
         parser.write(fp)
@@ -168,14 +176,21 @@ class Config(object):
         fp.close()
         self.reload_hosts()
 
-    @staticmethod
-    def add_host_section(parser, host):
+    def add_host_section(self, parser, host):
         if host['host']:
             if not host['name']:
                 host['name'] = host['host']
             parser.add_section(host['uuid'])
-            for key in ['name', 'host', 'port', 'username', 'password', 'group', 'description', 'log', 'ssh_options', 'start_commands']:
+            for key in ['name', 'host', 'port', 'username', 'group', 'description', 'log', 'ssh_options', 'start_commands', 'key', 'password']:
                 parser.set(host['uuid'], key, host[key])
+
+    def encrypt_password(self, host):
+        cipher = AESCipher(base64.decodestring(host['key']))
+        return cipher.encrypt(host['password'])
+
+    def decrypt_password(self, host):
+        cipher = AESCipher(base64.decodestring(host['key']))
+        return cipher.decrypt(host['password'])
 
     def get_system_font(self):
         """Look up the system font"""
