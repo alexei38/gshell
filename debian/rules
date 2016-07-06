@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+override_dh_install:
+	rm -rf debian/gshell
+	mkdir -p debian/gshell/usr/share/applications
+	mkdir -p debian/gshell/usr/share/icons/
+	mkdir -p debian/gshell/usr/bin/
+	mkdir -p debian/gshell/
+	cp gshell debian/gshell/usr/bin/
+	cp Gshell.desktop debian/gshell/usr/share/applications/
+	cp src/icon/gshell.png debian/gshell/usr/share/icons/
+	cp -r src debian/gshell/usr/share/gshell
+%:
+	dh $@
+

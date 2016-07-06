@@ -1,7 +1,0 @@
-Package: gshell
-Version: VERSION
-Section: utility
-Architecture: all
-Depends: python-vte, sshpass, python-keybinder, python-psutil
-Maintainer: Alexei Margasov <alexei@margasov.ru>
-Description: Gshell terminal

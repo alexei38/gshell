@@ -1,0 +1,12 @@
+Source: gshell
+Maintainer: Alexei Margasov <alexei@margasov.ru>
+Priority: extra
+Section: utils
+Build-Depends: debhelper (>=9)
+
+Package: gshell
+Architecture: i386 amd64
+Priority: extra
+Section: utils
+Depends: python-vte, sshpass, python-keybinder, python-psutil
+Description: Gshell terminal
