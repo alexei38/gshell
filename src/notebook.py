@@ -63,12 +63,13 @@ class GshellNoteBook(gtk.Notebook):
         envv = []
         if host['password']:
             command = 'sshpass'
+            argv += ['sshpass']
         else:
             command = 'ssh'
-        argv += [command]
         argv += ['ssh']
         argv += ['-p', host['port']]
-        argv += ['-l', host['username']]
+        if host['username']:
+            argv += ['-l', host['username']]
         argv += ['-o', 'StrictHostKeyChecking=no']
         argv += [host['host']]
         terminal = self.add_tab(title=host['name'], command=command, argv=argv, envv=envv, terminal=terminal)
