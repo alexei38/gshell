@@ -1,3 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import sys
+sys.path.append('/usr/share/gshell')
 
-/usr/share/gshell/gshell $@
+import gtk
+import dbus
+from gshell import Gshell
+from dbusserver import BUS_PATH
+from dbusserver import BUS_NAME
+from dbusserver import GshellDbus
+
+try:
+    bus = dbus.SessionBus()
+    remote_object = bus.get_object(BUS_NAME, BUS_PATH)
+    already_running = True
+except dbus.DBusException:
+    instance = Gshell()
+    remote_object = GshellDbus(instance)
+    already_running = False
+
+if already_running:
+    remote_object.show_hide()
+else:
+    remote_object.new_window()
+    gtk.main()
+

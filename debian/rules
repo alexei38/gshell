@@ -5,7 +5,6 @@ override_dh_install:
 	mkdir -p debian/gshell/usr/share/applications
 	mkdir -p debian/gshell/usr/share/icons/
 	mkdir -p debian/gshell/usr/bin/
-	mkdir -p debian/gshell/
 	cp gshell debian/gshell/usr/bin/
 	cp Gshell.desktop debian/gshell/usr/share/applications/
 	cp src/icon/gshell.png debian/gshell/usr/share/icons/

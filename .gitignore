@@ -1,3 +1,6 @@
 *.pyc
 *.deb
-debian/changelog
+build/
+*.dsc
+*.tar.gz
+*.changes

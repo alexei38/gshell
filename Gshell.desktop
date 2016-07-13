@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Gshell
-Exec=/usr/share/gshell/gshell
+Exec=/usr/bin/env gshell
 Icon=gshell
 Type=Application
 Categories=GNOME;GTK;Utility;TerminalEmulator;System;
