@@ -99,7 +99,7 @@ class ManageHost(gtk.Window):
                 group_hosts.append(host)
         return (hosts, group_hosts)
 
-    def search_host(self, host):
+    def search_host(self, host, list_host=False):
         searchtext = self.entry.get_text().decode('utf-8').lower()
         if len(searchtext) >= 2:
             if [v for v in host['name'], host['host'], host['username'], host['group']
@@ -108,7 +108,7 @@ class ManageHost(gtk.Window):
             else:
                 return False
         else:
-            return True
+            return list_host
 
     def on_key_entry(self, *args):
         gobject.timeout_add(50, self.rebuild_host_store)
@@ -241,7 +241,7 @@ class ManageHost(gtk.Window):
         for host in self.gshell.config.hosts:
             group = host['group']
             host_addr = '%s:%s' % (host['host'], host['port'])
-            if not self.search_host(host):
+            if not self.search_host(host, True):
                 continue
             if group not in host_groups:
                 icon_file = self.gshell.config.get_icon('cubes.png')
