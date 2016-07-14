@@ -16,6 +16,9 @@ cp Gshell.desktop build/
 cd build
 
 version=$(git describe | grep -E -o "^[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}-[[:digit:]]{1,}")
+
+sed -i "s/\$VERSION/$version/" src/about.py
+
 debchange --create --package gshell -v $version -D trusty --empty "Some bugs fixed"
 dpkg-buildpackage -S -rfakeroot
 #dput ppa:alexei38/gshell gshell\_$version\_source.changes
