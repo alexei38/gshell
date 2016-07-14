@@ -29,6 +29,7 @@ class ManageHost(gtk.Window):
         return False
 
     def on_connect(self, *args):
+        search = self.entry.get_text().decode('utf-8').lower()
         hosts, host_groups = self.find_selected_hosts()
         uniq_hosts = []
         for host in (hosts + host_groups):
@@ -92,16 +93,22 @@ class ManageHost(gtk.Window):
                 groups.append(name)
         hosts = [host for host in self.config.hosts if host['uuid'] in uuids]
         searchtext = self.entry.get_text()
-        if len(searchtext) >= 2:
-            search = searchtext.decode('utf-8').lower()
-            group_hosts = []
-            for host in self.config.hosts:
-                if [v for v in host['name'], host['host'], host['username'], host['group']
-                       if search in v.decode('utf-8').lower()]:
-                    group_hosts.append(host)
-        else:
-            group_hosts = [host for host in self.config.hosts if host['group'] in groups]
+        group_hosts = []
+        for host in self.config.hosts:
+            if self.search_host(host):
+                group_hosts.append(host)
         return (hosts, group_hosts)
+
+    def search_host(self, host):
+        searchtext = self.entry.get_text().decode('utf-8').lower()
+        if len(searchtext) >= 2:
+            if [v for v in host['name'], host['host'], host['username'], host['group']
+                           if searchtext in v.decode('utf-8').lower()]:
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def on_key_entry(self, *args):
         gobject.timeout_add(50, self.rebuild_host_store)
@@ -234,10 +241,8 @@ class ManageHost(gtk.Window):
         for host in self.gshell.config.hosts:
             group = host['group']
             host_addr = '%s:%s' % (host['host'], host['port'])
-            if len(search) >= 2:
-                if not [v for v in host['name'], host['host'], host['username'], host['group']
-                           if search in v.decode('utf-8').lower()]:
-                    continue
+            if not self.search_host(host):
+                continue
             if group not in host_groups:
                 icon_file = self.gshell.config.get_icon('cubes.png')
                 icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 15, 15)
