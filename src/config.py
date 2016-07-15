@@ -155,6 +155,8 @@ class Config(object):
         if not host_saved:
             new_host['password'] = self.encrypt_password(new_host)
             self.add_host_section(parser, new_host)
+        if not os.path.exists(self.conf_dir):
+            os.makedirs(self.conf_dir)
         fp = open(self.host_file, 'w')
         parser.write(fp)
         fp.close()
@@ -172,6 +174,8 @@ class Config(object):
             if host == remove_host:
                 continue
             self.add_host_section(parser, host)
+        if not os.path.exists(self.conf_dir):
+            os.makedirs(self.conf_dir)
         fp = open(self.host_file, 'w')
         parser.write(fp)
         fp.close()
