@@ -2,7 +2,7 @@
 import gtk
 import gobject
 from editablelabel import EditableLabel
-from menu import GshellPopupMenu
+from menu import GshellTabPopupMenu
 from config import Config
 
 class GshellTabLabel(gtk.HBox):
@@ -18,12 +18,12 @@ class GshellTabLabel(gtk.HBox):
         self.terminal = None
         self.label = EditableLabel(title)
         self.update_angle()
-        self.label.broadcast_image = None
+        self.broadcast_image = None
         self.prefix_box = gtk.HBox()
         self.pack_start(self.prefix_box, False, False)
         self.pack_start(self.label, True, True)
         self.update_button()
-        self.popupmenu = GshellPopupMenu(tablabel=self, notebook=self.notebook)
+        self.popupmenu = GshellTabPopupMenu(tablabel=self, notebook=self.notebook)
         self.connect('button-press-event', self.show_popupmenu)
         self.show_all()
 

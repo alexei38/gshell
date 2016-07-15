@@ -21,7 +21,6 @@ class GshellTerm(vte.Terminal):
         self.label = None
         self.host = None
         self.pid = None
-        self.page_term = None
         self.seatch = None
         self.scrollbar = None
         self.logger = None
@@ -237,8 +236,15 @@ class GshellTerm(vte.Terminal):
             self.set_colors(self.fgcolor_inactive, self.bgcolor, self.palette_inactive)
         return False
 
+    def disable_broadcast(self, *args):
+        self.broadcast = False
+        if isinstance(self.label.broadcast_image, gtk.Image):
+            self.label.broadcast_image.destroy()
+
     def enable_broadcast(self, *args):
         self.broadcast = not self.broadcast
+        if isinstance(self.label.broadcast_image, gtk.Image):
+            self.label.broadcast_image.destroy()
         if self.broadcast:
             self.label.broadcast_image = gtk.Image()
             broadcast_icon_file = self.config.get_icon('broadcast.png')
@@ -246,6 +252,3 @@ class GshellTerm(vte.Terminal):
             self.label.broadcast_image.set_from_pixbuf(broadcast_icon)
             self.label.broadcast_image.show()
             self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 1)
-        else:
-            if isinstance(self.label.broadcast_image, gtk.Image):
-                self.label.broadcast_image.destroy()

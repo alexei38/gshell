@@ -178,10 +178,10 @@ class GshellMenu(gtk.MenuBar):
                 separator = gtk.SeparatorMenuItem()
                 parent.add(separator)
 
-class GshellPopupMenu(gtk.Menu):
+class GshellTabPopupMenu(gtk.Menu):
 
     def __init__(self, tablabel, notebook):
-        super(GshellPopupMenu, self).__init__()
+        super(GshellTabPopupMenu, self).__init__()
         self.tablabel = tablabel
         self.notebook = notebook
         self.terminal_broadcast = gtk.CheckMenuItem('Enable Broadcast')

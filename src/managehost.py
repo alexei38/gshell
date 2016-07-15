@@ -29,7 +29,6 @@ class ManageHost(gtk.Window):
         return False
 
     def on_connect(self, *args):
-        search = self.entry.get_text().decode('utf-8').lower()
         hosts, host_groups = self.find_selected_hosts()
         uniq_hosts = []
         for host in (hosts + host_groups):
@@ -92,10 +91,9 @@ class ManageHost(gtk.Window):
             else:
                 groups.append(name)
         hosts = [host for host in self.config.hosts if host['uuid'] in uuids]
-        searchtext = self.entry.get_text()
         group_hosts = []
         for host in self.config.hosts:
-            if self.search_host(host):
+            if host['group'] in groups and self.search_host(host, list_host=True):
                 group_hosts.append(host)
         return (hosts, group_hosts)
 
@@ -236,7 +234,6 @@ class ManageHost(gtk.Window):
 
     def rebuild_host_store(self):
         self.store.clear()
-        search = self.entry.get_text().decode('utf-8').lower()
         host_groups = {}
         for host in self.gshell.config.hosts:
             group = host['group']
@@ -277,13 +274,19 @@ class GshellHost(gtk.Dialog):
             self.host['log'] = self.log_input.get_text()
             self.host['ssh_options'] = self.ssh_options_input.get_text()
             self.host['description'] = self.description_input.get_text()
-            self.host['start_commands'] = self.start_commands_input.get_text()
+
+            command_buffer = self.start_commands_input.get_buffer()
+            start_iter =  command_buffer.get_start_iter()
+            end_iter = command_buffer.get_end_iter()
+            self.host['start_commands'] = command_buffer.get_text(start_iter, end_iter, 0)
+
             self.config.save_host(self.host)
             gobject.timeout_add(50, self.main_window.rebuild_host_store)
         self.destroy()
 
     def build_dialog(self):
         self.add_buttons(gtk.STOCK_SAVE, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
+        self.set_size_request(400, 550)
         self.set_resizable(False)
         if self.host:
             self.set_title("Edit Host")
@@ -357,12 +360,15 @@ class GshellHost(gtk.Dialog):
             self.description_input.set_text(self.host['description'])
         table.attach(description_label, 0, 1, 8, 9, xpadding=15, ypadding=5)
         table.attach(self.description_input, 1, 2, 8, 9, xpadding=15, ypadding=5)
-        self.show_all()
 
         start_commands_label = gtk.Label('Start Commands')
-        self.start_commands_input = gtk.Entry()
+        self.start_commands_input = gtk.TextView()
+        self.start_commands_input.set_size_request(-1, 150)
+        self.start_commands_input.set_left_margin(5)
+        self.start_commands_input.set_editable(True)
         if self.host and self.host['start_commands']:
-            self.start_commands_input.set_text(self.host['start_commands'])
+            buff = self.start_commands_input.get_buffer()
+            buff.set_text(self.host['start_commands'])
         table.attach(start_commands_label, 0, 1, 9, 10, xpadding=15, ypadding=5)
         table.attach(self.start_commands_input, 1, 2, 9, 10, xpadding=15, ypadding=5)
         self.show_all()

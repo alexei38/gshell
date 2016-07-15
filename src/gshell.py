@@ -12,6 +12,7 @@ from urlparse import urlparse
 from toolbar import GshellToolbar
 from managehost import ManageHost
 from notebook import GshellNoteBook
+from broadcast import GshellBroadcastDialog
 
 class Gshell(object):
 
@@ -91,6 +92,21 @@ class Gshell(object):
 
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
+
+    def menu_broadcast(self, widget, action, *args):
+        if action == 'enable' or action == 'disable':
+            terminals = self.notebook.get_all_terminals()
+            if len(terminals) > 0:
+                for terminal in terminals:
+                    terminal.disable_broadcast()
+                    if action == 'enable':
+                        terminal.enable_broadcast()
+        if action == 'current':
+            terminal = self.notebook.get_current_terminal()
+            if terminal:
+                terminal.enable_broadcast()
+        if action == 'choise':
+            GshellBroadcastDialog(self)
 
     def menu_log(self, widget, action):
         terminal = self.notebook.get_current_terminal()

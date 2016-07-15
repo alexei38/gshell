@@ -37,24 +37,24 @@ class GshellNoteBook(gtk.Notebook):
             self.terminal.logger = logger
             self.terminalbox = self.create_terminalbox()
             page_term = self.append_page(self.terminalbox)
-            self.terminal.page_term = page_term
             if not title:
                 title = 'Term%s ' % (int(page_term) + 1)
             else:
                 title = title + ' '
-            self.label = GshellTabLabel(title, self)
-            self.terminal.label = self.label
+            label = GshellTabLabel(title, self)
+            self.terminal.label = label
             self.terminal.notebook = self
-            self.label.terminal = self.terminal
-            self.label.connect('close-clicked', self.close_tab)
-            self.terminal.connect('child-exited', self.on_terminal_exit, {'terminalbox' : self.terminalbox, 'label' : self.label, 'terminal' : self.terminal})
-            self.set_tab_label(self.terminalbox, self.label)
+            label.terminal = self.terminal
+            label.connect('close-clicked', self.close_tab)
+            self.terminal.connect('child-exited', self.on_terminal_exit, {'terminalbox' : self.terminalbox, 'label' : label, 'terminal' : self.terminal})
+            self.set_tab_label(self.terminalbox, label)
             self.set_tab_reorderable(self.terminalbox, True)
         else:
-            self.label = self.terminal.label
-            self.label.unmark_close()
+            label = self.terminal.label
+            label.unmark_close()
+            page_term = self.get_page_by_terminal(self.terminal)
         self.show_all()
-        self.set_current_page(self.terminal.page_term)
+        self.set_current_page(page_term)
         return self.terminal
 
     def new_tab_by_host(self, host, terminal=None):
@@ -80,10 +80,26 @@ class GshellNoteBook(gtk.Notebook):
         self.gshell.switch_toolbar_sensitive(terminal)
         if password:
             terminal.send_data(data=password, timeout=2000, reset=True)
+        if host['start_commands']:
+            commands = []
+            basetime = 3000
+            for line in host['start_commands'].splitlines():
+                if line.startswith("##SUDO"):
+                    terminal.send_data(data='sudo -i', timeout=basetime)
+                    if password:
+                        basetime += 500
+                        terminal.send_data(data=password, timeout=basetime)
+                        basetime += 500
+                else:
+                    terminal.send_data(data=line, timeout=basetime)
+                basetime += 500
 
     def get_terminal_by_page(self, tabnum):
         tab_parent = self.get_nth_page(tabnum)
         return self.find_children_terminal(tab_parent)
+
+    def get_page_by_terminal(self, terminal):
+        return self.page_num(terminal.get_parent().get_parent())
 
     def find_children_terminal(self, parent):
         if parent:
