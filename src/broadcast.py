@@ -13,7 +13,7 @@ class GshellBroadcastDialog(gtk.Dialog):
         self.run_window()
 
     def build_dialog(self):
-        self.set_default_size(300, 400)
+        self.set_default_size(400, 500)
         self.add_buttons(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
         self.set_title("Enable Broadcast")
         
