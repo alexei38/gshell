@@ -13,8 +13,8 @@ cp -r debian build/debian
 cp -r src build/src
 cp gshell build/gshell
 cp Gshell.desktop build/
+find build -iname '*.pyc' -delete
 cd build
-
 version=$(git describe | grep -E -o "^[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}-[[:digit:]]{1,}")
 
 sed -i "s/\$VERSION/$version/" src/about.py
