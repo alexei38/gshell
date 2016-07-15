@@ -58,6 +58,7 @@ DEFAULTS = {
         'key_full_screen'           : 'F11',
         'menu_select_all'           : '<Shift><Control>A',
         'menu_search'               : '<Shift><Control>F',
+        'key_broadcast'             : '<Shift><Control>B',
     },
     'global_keybinder': {
         'show_hide'                 : '<Control>F12',

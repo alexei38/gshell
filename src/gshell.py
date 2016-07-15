@@ -182,6 +182,9 @@ class Gshell(object):
             return
         self.window.window.iconify()
 
+    def key_broadcast(self, *args):
+        self.menu_broadcast(self, action='current')
+
     def key_zoom(self, zoom):
         def callback(*args):
             self.menu_zoom_tab(self, zoom)

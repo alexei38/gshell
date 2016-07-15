@@ -8,6 +8,7 @@ from logger import GshellLogger
 from terminal import GshellTerm
 from tablabel import GshellTabLabel
 from search import GshellSearch
+from menu import GshellTerminalPopupMenu
 
 class GshellNoteBook(gtk.Notebook):
 
@@ -47,6 +48,7 @@ class GshellNoteBook(gtk.Notebook):
             label.terminal = self.terminal
             label.connect('close-clicked', self.close_tab)
             self.terminal.connect('child-exited', self.on_terminal_exit, {'terminalbox' : self.terminalbox, 'label' : label, 'terminal' : self.terminal})
+            self.terminal.connect('button-press-event', self.terminal_popup)
             self.set_tab_label(self.terminalbox, label)
             self.set_tab_reorderable(self.terminalbox, True)
         else:
@@ -212,3 +214,9 @@ class GshellNoteBook(gtk.Notebook):
         for term in self.get_all_terminals():
             if term != terminal and term.broadcast:
                 term.emit(type, event)
+
+    def terminal_popup(self, terminal, event):
+        if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3 and self.terminal:
+            menu = GshellTerminalPopupMenu(terminal, self.gshell)
+            menu.show_all()
+            menu.popup(None, None, None, event.button, event.time)

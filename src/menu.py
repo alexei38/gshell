@@ -206,4 +206,26 @@ class GshellTabPopupMenu(gtk.Menu):
         self.close_all_tabs.connect('activate', self.notebook.close_tabs, tablabel, 'all')
         self.insert(self.close_all_tabs, -1)
 
+class GshellTerminalPopupMenu(gtk.Menu):
+
+    def __init__(self, terminal, gshell):
+        super(GshellTerminalPopupMenu, self).__init__()
+        self.terminal = terminal
+        self.gshell = gshell
+
+        menu_item = gtk.ImageMenuItem(gtk.STOCK_COPY)
+        menu_item.get_children()[0].set_label('Copy')
+        menu_item.connect('activate', self.gshell.menu_copy)
+        self.insert(menu_item, -1)
+
+        menu_item = gtk.ImageMenuItem(gtk.STOCK_PASTE)
+        menu_item.get_children()[0].set_label('Paste')
+        menu_item.connect('activate', self.gshell.menu_paste)
+        self.insert(menu_item, -1)
+
         self.insert(gtk.SeparatorMenuItem(), -1)
+
+        menu_item = gtk.ImageMenuItem(gtk.STOCK_CLOSE)
+        menu_item.get_children()[0].set_label('Close')
+        menu_item.connect('activate', self.gshell.notebook.close_tab, self.terminal.label)
+        self.insert(menu_item, -1)
