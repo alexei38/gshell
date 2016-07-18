@@ -6,9 +6,9 @@ sys.path.append('/usr/share/gshell')
 import gtk
 import dbus
 from gshell import Gshell
-from dbusserver import BUS_PATH
-from dbusserver import BUS_NAME
-from dbusserver import GshellDbus
+from dbusservice import BUS_PATH
+from dbusservice import BUS_NAME
+from dbusservice import GshellDbus
 
 try:
     bus = dbus.SessionBus()

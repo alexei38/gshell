@@ -181,8 +181,7 @@ class ManageHost(gtk.Window):
         self.treeselection = self.tree.get_selection()
         self.treeselection.set_mode(gtk.SELECTION_MULTIPLE)
 
-        pango_font = pango.FontDescription(self.config.get_system_font())
-        pango_font.set_size(pango_font.get_size() - pango.SCALE*2)
+        pango_font = pango.FontDescription(self.config['font_host_tree'])
 
         renderer_name = gtk.CellRendererText()
         renderer_name.set_property('font-desc', pango_font)

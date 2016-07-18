@@ -24,6 +24,7 @@ DEFAULTS = {
     'term'                  : 'xterm',
     'colorterm'             : 'gnome-terminal',
     'font'                  : 'Mono 10',
+    'font_host_tree'        : 'Mono 8',
     'foreground_color'      : '#fff',
     'scrollbar_position'    : "right",
     'scroll_background'     : True,
