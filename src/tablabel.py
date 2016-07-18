@@ -23,19 +23,16 @@ class GshellTabLabel(gtk.HBox):
         self.pack_start(self.prefix_box, False, False)
         self.pack_start(self.label, True, True)
         self.update_button()
-        self.popupmenu = GshellTabPopupMenu(tablabel=self, notebook=self.notebook)
         self.connect('button-press-event', self.show_popupmenu)
         self.show_all()
 
     def show_popupmenu(self, widget, event):
         if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3 and self.terminal:
-            self.popupmenu.terminal_broadcast.set_active(self.terminal.broadcast)
-            self.popupmenu.enable_log.set_active(self.terminal.logger and self.terminal.logger.logging)
-            self.popupmenu.show_all()
-            self.popupmenu.popup(None, None, None, event.button, event.time)
+            popupmenu = GshellTabPopupMenu(tablabel=self, notebook=self.notebook)
+            popupmenu.popup(None, None, None, event.button, event.time)
         return False
 
-    def enable_broadcast(self, widget, *args):
+    def on_enable_broadcast(self, widget, *args):
         if self.terminal:
             self.terminal.emit('enable-broadcast', self)
 

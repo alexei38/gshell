@@ -70,12 +70,12 @@ class GshellToolbar(gtk.Toolbar):
 
         self.insert(gtk.SeparatorToolItem(), -1)
 
-        broadcast_image_file = self.gshell.config.get_icon('broadcast.png')
+        broadcast_image_file = self.gshell.config.broadcast_images['blue']
         broadcast_image = gtk.gdk.pixbuf_new_from_file_at_size(broadcast_image_file, 18, 18)
         image = gtk.Image()
         image.set_from_pixbuf(broadcast_image)
-        self.broadcast_button = gtk.MenuToolButton(image, 'Broadcast')
-        self.broadcast_button.connect('clicked', self.gshell.menu_broadcast, 'current')
+        broadcast_button = gtk.MenuToolButton(image, 'Broadcast')
+        broadcast_button.connect('clicked', self.gshell.menu_broadcast, 'current')
         menu_broadcast = gtk.Menu()
         menu_broadcast_all = gtk.MenuItem('Broadcast Enable All')
         menu_broadcast_all.connect('activate', self.gshell.menu_broadcast, 'enable')
@@ -87,7 +87,7 @@ class GshellToolbar(gtk.Toolbar):
         menu_broadcast_select.connect('activate', self.gshell.menu_broadcast, 'choise')
         menu_broadcast.append(menu_broadcast_select)
         menu_broadcast.show_all()
-        self.broadcast_button.set_menu(menu_broadcast)
-        self.insert(self.broadcast_button, -1)
+        broadcast_button.set_menu(menu_broadcast)
+        self.insert(broadcast_button, -1)
 
         self.insert(gtk.SeparatorToolItem(), -1)

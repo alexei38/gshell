@@ -79,6 +79,12 @@ class Config(object):
         self.host_file = os.path.join(self.conf_dir, 'hosts.ini')
         self.host_file_backup = os.path.join(self.conf_dir, 'hosts.bck')
         self.reload_hosts()
+        self.broadcast_images = {
+            'blue' : self.get_icon('broadcast-blue.png'),
+            'red' : self.get_icon('broadcast-red.png'),
+            'green' : self.get_icon('broadcast-green.png'),
+            'yellow' : self.get_icon('broadcast-yellow.png'),
+        }
 
     def __getitem__(self, key):
         value = DEFAULTS.get(key)

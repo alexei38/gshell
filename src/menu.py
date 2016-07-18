@@ -185,10 +185,12 @@ class GshellTabPopupMenu(gtk.Menu):
         self.tablabel = tablabel
         self.notebook = notebook
         self.terminal_broadcast = gtk.CheckMenuItem('Enable Broadcast')
-        self.terminal_broadcast.connect('activate', self.tablabel.enable_broadcast)
+        self.terminal_broadcast.set_active(self.tablabel.terminal.broadcast)
+        self.terminal_broadcast.connect('activate', self.tablabel.on_enable_broadcast)
         self.insert(self.terminal_broadcast, -1)
 
         self.enable_log = gtk.CheckMenuItem('Enable log')
+        self.enable_log.set_active(self.tablabel.terminal.logger and self.tablabel.terminal.logger.logging)
         self.enable_log.connect('activate', self.tablabel.enable_log)
         self.insert(self.enable_log, -1)
 
@@ -205,6 +207,8 @@ class GshellTabPopupMenu(gtk.Menu):
         self.close_all_tabs = gtk.CheckMenuItem('Close All Tabs')
         self.close_all_tabs.connect('activate', self.notebook.close_tabs, tablabel, 'all')
         self.insert(self.close_all_tabs, -1)
+
+        self.show_all()
 
 class GshellTerminalPopupMenu(gtk.Menu):
 

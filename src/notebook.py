@@ -210,9 +210,9 @@ class GshellNoteBook(gtk.Notebook):
         hbox.show_all()
         return vbox
 
-    def all_emit(self, terminal, type, event):
+    def group_emit(self, terminal, type, event):
         for term in self.get_all_terminals():
-            if term != terminal and term.broadcast:
+            if term != terminal and term.broadcast and term.group == terminal.group:
                 term.emit(type, event)
 
     def terminal_popup(self, terminal, event):

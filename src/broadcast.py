@@ -17,7 +17,7 @@ class GshellBroadcastDialog(gtk.Dialog):
         self.add_buttons(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
         self.set_title("Enable Broadcast")
         
-        self.store = gtk.ListStore(bool, str, str, int)
+        self.store = gtk.ListStore(bool, str, str, int, str)
         self.tree = gtk.TreeView(self.store)
 
         renderer = gtk.CellRendererToggle()
@@ -41,6 +41,18 @@ class GshellBroadcastDialog(gtk.Dialog):
         column.set_visible(False)
         self.tree.append_column(column)
 
+        combo_store = gtk.ListStore(str)
+        for color in ['blue', 'red', 'green', 'yellow']:
+            combo_store.append([color])
+        renderer = gtk.CellRendererCombo()
+        renderer.set_property('editable', True)
+        renderer.set_property('has-entry', True)
+        renderer.set_property("text-column", 0)
+        renderer.set_property("model", combo_store)
+        renderer.connect("edited", self.on_combo_changed)
+        column = gtk.TreeViewColumn('Group', renderer, text=4)
+        self.tree.append_column(column)
+
         scroll = gtk.ScrolledWindow()
         scroll.add(self.tree)
 
@@ -53,7 +65,7 @@ class GshellBroadcastDialog(gtk.Dialog):
             if terminal.host:
                 host = terminal.host['host']
             page_num = self.main_window.notebook.get_page_by_terminal(terminal)
-            self.store.append((terminal.broadcast, label, host, page_num))
+            self.store.append((terminal.broadcast, label, host, page_num, terminal.group))
         self.show_all()
 
     def run_window(self):
@@ -62,7 +74,9 @@ class GshellBroadcastDialog(gtk.Dialog):
             for row in self.store:
                 broadcast = self.store.get_value(row.iter, 0)
                 page_num = self.store.get_value(row.iter, 3)
+                group = self.store.get_value(row.iter, 4)
                 terminal = self.main_window.notebook.get_terminal_by_page(page_num)
+                terminal.group = group
                 terminal.disable_broadcast()
                 if broadcast:
                     terminal.enable_broadcast()
@@ -70,3 +84,6 @@ class GshellBroadcastDialog(gtk.Dialog):
 
     def on_cell_toggled(self, widget, path):
         self.store[path][0] = not self.store[path][0]
+
+    def on_combo_changed(self, widget, path, text):
+        self.store[path][4] = text

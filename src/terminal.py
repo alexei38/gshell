@@ -27,6 +27,7 @@ class GshellTerm(vte.Terminal):
         self.notebook = None
         self.terminal_active = False
         self.broadcast = False
+        self.group = 'blue'
         self.composite_support = hasattr(self, "set_opacity") or hasattr(self, "is_composited")
         self.config = gshell.config
         self.gshell = gshell
@@ -223,7 +224,7 @@ class GshellTerm(vte.Terminal):
         if not event:
             return False
         if self.broadcast and self.is_focus():
-            self.notebook.all_emit(self, 'key-press-event', event)
+            self.notebook.group_emit(self, 'key-press-event', event)
             return False
 
     def on_terminal_focus_in(self, *args):
@@ -247,8 +248,8 @@ class GshellTerm(vte.Terminal):
             self.label.broadcast_image.destroy()
         if self.broadcast:
             self.label.broadcast_image = gtk.Image()
-            broadcast_icon_file = self.config.get_icon('broadcast.png')
-            broadcast_icon = gtk.gdk.pixbuf_new_from_file_at_size(broadcast_icon_file, 18, 18)
-            self.label.broadcast_image.set_from_pixbuf(broadcast_icon)
+            icon = self.config.broadcast_images[self.group]
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(icon, 18, 18)
+            self.label.broadcast_image.set_from_pixbuf(pixbuf)
             self.label.broadcast_image.show()
             self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 1)
