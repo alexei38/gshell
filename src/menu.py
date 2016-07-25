@@ -189,6 +189,16 @@ class GshellTabPopupMenu(gtk.Menu):
         self.terminal_broadcast.connect('activate', self.tablabel.on_enable_broadcast)
         self.insert(self.terminal_broadcast, -1)
 
+        self.broadcast_group = gtk.MenuItem('Broadcast Group')
+        sub_menu = gtk.Menu()
+        for color in self.notebook.config.broadcast_images.keys():
+            menu_item = gtk.CheckMenuItem(color)
+            menu_item.set_active(self.tablabel.terminal.group == color)
+            menu_item.connect('activate', self.tablabel.terminal.on_change_group, color)
+            sub_menu.insert(menu_item, -1)
+        self.broadcast_group.set_submenu(sub_menu)
+        self.insert(self.broadcast_group, -1)
+
         self.enable_log = gtk.CheckMenuItem('Enable log')
         self.enable_log.set_active(self.tablabel.terminal.logger and self.tablabel.terminal.logger.logging)
         self.enable_log.connect('activate', self.tablabel.enable_log)

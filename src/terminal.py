@@ -253,3 +253,8 @@ class GshellTerm(vte.Terminal):
             self.label.broadcast_image.set_from_pixbuf(pixbuf)
             self.label.broadcast_image.show()
             self.label.prefix_box.pack_start(self.label.broadcast_image, False, False, 1)
+
+    def on_change_group(self, widget, new_group):
+        self.group = new_group
+        self.disable_broadcast()
+        self.enable_broadcast()
