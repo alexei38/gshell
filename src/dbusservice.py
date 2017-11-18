@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import gtk
 import dbus.service
 import dbus.glib
 
@@ -26,3 +25,9 @@ class GshellDbus(dbus.service.Object):
     @dbus.service.method(BUS_NAME)
     def show_hide(self):
         self.gshell.show_hide()
+
+    @dbus.service.method(BUS_NAME, in_signature='s')
+    def execute_command(self, command):
+        cmd = command.split()[0]
+        argv = command.split()
+        self.gshell.notebook.add_tab(command=cmd, argv=argv)

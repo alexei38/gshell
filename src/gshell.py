@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import gobject
 import os
 import gtk
 import keybinder
 from config import Config
 from menu import GshellMenu
 from about import AboutDialog
-from urlparse import urlparse
 from toolbar import GshellToolbar
 from managehost import ManageHost
 from notebook import GshellNoteBook

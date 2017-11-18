@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import gtk
 import uuid
 import gconf
 import shutil

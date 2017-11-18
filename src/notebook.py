@@ -2,7 +2,6 @@
 
 import vte
 import gtk
-import pango
 import gobject
 from logger import GshellLogger
 from terminal import GshellTerm
@@ -29,6 +28,8 @@ class GshellNoteBook(gtk.Notebook):
             self.terminal = terminal
         else:
             self.terminal = GshellTerm(self.gshell)
+        print 'GshellNoteBook::add_tab command: %s' % command
+        print 'GshellNoteBook::add_tab argv: %s' % argv
         self.terminal.spawn_child(command=command, argv=argv, envv=envv)
         print "PID Terminal: %s" % self.terminal.pid
         if command in ['sshpass', 'ssh']:

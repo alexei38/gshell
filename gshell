@@ -8,20 +8,35 @@ import dbus
 from gshell import Gshell
 from dbusservice import BUS_PATH
 from dbusservice import BUS_NAME
+from optparse import OptionParser
 from dbusservice import GshellDbus
 
-try:
-    bus = dbus.SessionBus()
-    remote_object = bus.get_object(BUS_NAME, BUS_PATH)
-    already_running = True
-except dbus.DBusException:
-    instance = Gshell()
-    remote_object = GshellDbus(instance)
-    already_running = False
+def configure_gshell(args, remote_object):
+    if args.command:
+        remote_object.execute_command(args.command)
 
-if already_running:
-    remote_object.show_hide()
-else:
-    remote_object.new_window()
-    gtk.main()
+def main(args):
+    try:
+        bus = dbus.SessionBus()
+        remote_object = bus.get_object(BUS_NAME, BUS_PATH)
+        already_running = True
+    except dbus.DBusException:
+        instance = Gshell()
+        remote_object = GshellDbus(instance)
+        already_running = False
+    if already_running:
+        remote_object.show_hide()
+        configure_gshell(args, remote_object)
+    else:
+        remote_object.new_window()
+        configure_gshell(args, remote_object)
+        gtk.main()
 
+
+if __name__ == '__main__':
+    parser = OptionParser()
+    parser.add_option('-c', '--command', dest='command',
+                      action='store', default='')
+    parser.add_option('-n', '--new-tab', dest='new_tab',
+                      action='store_true', default='')
+    main(parser.parse_args()[0])

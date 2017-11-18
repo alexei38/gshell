@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import gtk
-import gobject
 import re
 from config import Config
 
