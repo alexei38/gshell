@@ -4,17 +4,15 @@ import gtk
 import gobject
 import pango
 
+
 class ManageHost(gtk.Window):
 
     def __init__(self, gshell, *args):
         gtk.Window.__init__(self, *args)
-        self.gshell = gshell
-        self.notebook = self.gshell.notebook
-        self.config = self.gshell.config
-        self.connect("delete_event", self.on_exit)
-        self.connect("key-press-event",self._key_press_event)
-        self.build_window()
-        self.window.focus(0)
+        self.notebook = gshell.notebook
+        self.config = gshell.config
+        self.hosts_tree = GshellHostTree(gshell)
+        self.hosts_tree.tree.connect('cursor-changed', self.on_cursor_changed)
 
     def on_exit(self, *args):
         self.destroy()
@@ -28,16 +26,35 @@ class ManageHost(gtk.Window):
             return True
         return False
 
-    def on_connect(self, *args):
-        hosts, host_groups = self.find_selected_hosts()
+    def on_add_host(self, *args):
+        GshellHost(self)
+
+    def on_edit_host(self, *args):
+        hosts, host_groups = self.hosts_tree.find_selected_hosts()
+        host = hosts[0]
+        GshellHost(self, host=host)
+        gobject.timeout_add(50, self.on_cursor_changed)
+
+    def on_remove_host(self, *args):
+        hosts, host_groups = self.hosts_tree.find_selected_hosts()
         uniq_hosts = []
         for host in (hosts + host_groups):
             if host not in uniq_hosts:
                 uniq_hosts.append(host)
-                self.notebook.new_tab_by_host(host=host)
+                self.config.remove_host(host)
+                gobject.timeout_add(50, self.hosts_tree.rebuild_host_store)
+        gobject.timeout_add(50, self.on_cursor_changed)
+
+    def on_copy_host(self, *args):
+        hosts, host_groups = self.hosts_tree.find_selected_hosts()
+        host = hosts[0].copy()
+        host['uuid'] = None
+        host['name'] += '_copy'
+        GshellHost(self, host=host)
+        gobject.timeout_add(50, self.on_cursor_changed)
 
     def on_cursor_changed(self, *args):
-        hosts, host_groups = self.find_selected_hosts()
+        hosts, host_groups = self.hosts_tree.find_selected_hosts()
         if len(hosts) == 1:
             self.edit_button.set_sensitive(True)
             self.copy_button.set_sensitive(True)
@@ -50,66 +67,6 @@ class ManageHost(gtk.Window):
         else:
             self.remove_button.set_sensitive(False)
             self.connect_button.set_sensitive(False)
-
-    def on_add_host(self, *args):
-        GshellHost(self)
-
-    def on_edit_host(self, *args):
-        hosts, host_groups = self.find_selected_hosts()
-        host = hosts[0]
-        GshellHost(self, host=host)
-        gobject.timeout_add(50, self.on_cursor_changed)
-
-    def on_remove_host(self, *args):
-        hosts, host_groups = self.find_selected_hosts()
-        uniq_hosts = []
-        for host in (hosts + host_groups):
-            if host not in uniq_hosts:
-                uniq_hosts.append(host)
-                self.config.remove_host(host)
-                gobject.timeout_add(50, self.rebuild_host_store)
-        gobject.timeout_add(50, self.on_cursor_changed)
-
-    def on_copy_host(self, *args):
-        hosts, host_groups = self.find_selected_hosts()
-        host = hosts[0].copy()
-        host['uuid'] = None
-        host['name'] += '_copy'
-        GshellHost(self, host=host)
-        gobject.timeout_add(50, self.on_cursor_changed)
-
-    def find_selected_hosts(self):
-        model, paths = self.treeselection.get_selected_rows()
-        uuids = []
-        groups = []
-        for path in paths:
-            tree_iter = model.get_iter(path)
-            uuid = model.get_value(tree_iter, 5)
-            name = model.get_value(tree_iter, 1)
-            if uuid:
-                uuids.append(uuid)
-            else:
-                groups.append(name)
-        hosts = [host for host in self.config.hosts if host['uuid'] in uuids]
-        group_hosts = []
-        for host in self.config.hosts:
-            if host['group'] in groups and self.search_host(host, list_host=True):
-                group_hosts.append(host)
-        return (hosts, group_hosts)
-
-    def search_host(self, host, list_host=False):
-        searchtext = self.entry.get_text().decode('utf-8').lower()
-        if len(searchtext) >= 2:
-            if [v for v in host['name'], host['host'], host['username'], host['group']
-                           if searchtext in v.decode('utf-8').lower()]:
-                return True
-            else:
-                return False
-        else:
-            return list_host
-
-    def on_key_entry(self, *args):
-        gobject.timeout_add(50, self.rebuild_host_store)
 
     def build_window(self):
         self.set_size_request(550, 700)
@@ -153,16 +110,75 @@ class ManageHost(gtk.Window):
         self.connect_button = gtk.ToolButton(gtk.STOCK_CONNECT)
         self.connect_button.set_label("Connect")
         self.connect_button.set_tooltip(gtk.Tooltips(), 'Connect')
-        self.connect_button.connect('clicked', self.on_connect)
+        self.connect_button.connect('clicked', self.hosts_tree.on_connect)
         toolbar.insert(self.connect_button, -1)
 
         toolbar.insert(gtk.SeparatorToolItem(), -1)
 
         self.vbox.pack_start(toolbar, False, False, 0)
+        self.vbox.pack_start(self.hosts_tree, True, True)
 
-        """ Search """
+        """ Run """
+        self.connect("delete_event", self.on_exit)
+        self.connect("key-press-event",self._key_press_event)
+        self.show_all()
+        self.on_cursor_changed()
+        self.hosts_tree.entry.grab_focus()
+        self.window.focus(0)
+
+
+class GshellHostTree(gtk.VBox):
+
+    def __init__(self, gshell, *args):
+        gtk.VBox.__init__(self, *args)
+        self.config = gshell.config
+        self.notebook = gshell.notebook
+        self.build_tree()
+
+    def find_selected_hosts(self):
+        model, paths = self.treeselection.get_selected_rows()
+        uuids = []
+        groups = []
+        for path in paths:
+            tree_iter = model.get_iter(path)
+            uuid = model.get_value(tree_iter, 5)
+            name = model.get_value(tree_iter, 1)
+            if uuid:
+                uuids.append(uuid)
+            else:
+                groups.append(name)
+        hosts = [host for host in self.config.hosts if host['uuid'] in uuids]
+        group_hosts = []
+        for host in self.config.hosts:
+            if host['group'] in groups and self.search_host(host, list_host=True):
+                group_hosts.append(host)
+        return (hosts, group_hosts)
+
+    def search_host(self, host, list_host=False):
+        searchtext = self.entry.get_text().decode('utf-8').lower()
+        if len(searchtext) >= 2:
+            if [v for v in host['name'], host['host'], host['username'], host['group']
+                           if searchtext in v.decode('utf-8').lower()]:
+                return True
+            else:
+                return False
+        else:
+            return list_host
+
+    def on_connect(self, *args):
+        hosts, host_groups = self.find_selected_hosts()
+        uniq_hosts = []
+        for host in (hosts + host_groups):
+            if host not in uniq_hosts:
+                uniq_hosts.append(host)
+                self.notebook.new_tab_by_host(host=host)
+
+    def on_key_entry(self, *args):
+        gobject.timeout_add(50, self.rebuild_host_store)
+
+    def build_tree(self):
         hbox = gtk.HBox()
-        self.vbox.pack_start(hbox, False, False, 5)
+        self.pack_start(hbox, False, False, 5)
         hbox.pack_start(gtk.Label('Search: '), False, False, 5)
         self.entry = gtk.Entry()
         self.entry.connect('key-press-event', self.on_key_entry)
@@ -175,7 +191,6 @@ class ManageHost(gtk.Window):
         self.tree = gtk.TreeView(tree_model)
 
         self.tree.connect('row-activated', self.on_connect)
-        self.tree.connect('cursor-changed', self.on_cursor_changed)
 
         self.tree.set_rubber_banding(True)
         self.treeselection = self.tree.get_selection()
@@ -223,27 +238,22 @@ class ManageHost(gtk.Window):
 
         scroll = gtk.ScrolledWindow()
         scroll.add(self.tree)
-        self.vbox.pack_start(scroll, True, True, 0)
-
-        """ Run """
-        self.show_all()
+        self.pack_start(scroll, True, True, 0)
         self.rebuild_host_store()
-        self.on_cursor_changed()
-        self.tree.grab_focus()
 
     def rebuild_host_store(self):
         self.store.clear()
         host_groups = {}
-        for host in self.gshell.config.hosts:
+        for host in self.config.hosts:
             group = host['group']
             host_addr = '%s:%s' % (host['host'], host['port'])
             if not self.search_host(host, True):
                 continue
             if group not in host_groups:
-                icon_file = self.gshell.config.get_icon('cubes.png')
+                icon_file = self.config.get_icon('cubes.png')
                 icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 15, 15)
                 host_groups[group] = self.store.append(None, [icon, group, '','','', ''])
-            icon_file = self.gshell.config.get_icon('connect.png')
+            icon_file = self.config.get_icon('connect.png')
             icon = gtk.gdk.pixbuf_new_from_file_at_size(icon_file, 15, 15)
             self.store.append(host_groups[group], (icon, host['name'], host_addr, host['username'], host['description'], host['uuid']))
         self.tree.expand_all()
@@ -281,7 +291,7 @@ class GshellHost(gtk.Dialog):
 
             self.config.save_host(self.host)
             gobject.timeout_add(50, self.main_window.rebuild_host_store)
-        self.destroy()
+        self.window.destroy()
 
     def build_dialog(self):
         self.add_buttons(gtk.STOCK_SAVE, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)

@@ -14,7 +14,6 @@ class GshellTerm(vte.Terminal):
         'enable-broadcast': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,(gobject.TYPE_OBJECT,)),
     }
 
-
     def __init__(self, gshell, *args, **kwds):
         super(GshellTerm, self).__init__(*args, **kwds)
         self.mark_close = False

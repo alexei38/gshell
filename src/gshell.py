@@ -8,9 +8,10 @@ from config import Config
 from menu import GshellMenu
 from about import AboutDialog
 from toolbar import GshellToolbar
-from managehost import ManageHost
+from managehost import ManageHost, GshellHostTree
 from notebook import GshellNoteBook
 from broadcast import GshellBroadcastDialog
+
 
 class Gshell(object):
 
@@ -57,10 +58,15 @@ class Gshell(object):
         Notebook
         """
         self.notebook = GshellNoteBook(self)
-        self.vbox_main.pack_start(self.notebook, True, True, 0)
+
+        tree_hosts = GshellHostTree(self)
+        hpaned = gtk.HPaned()
+        hpaned.add(tree_hosts)
+        hpaned.add(self.notebook)
+
+        self.vbox_main.pack_start(hpaned, True, True, 0)
 
         self.hotkeys = GshellKeyBinder(self)
-        self.notebook.add_tab()
         self.window.show_all()
 
     def gshell_destroy(self, *args):
@@ -154,7 +160,8 @@ class Gshell(object):
             func()
 
     def menu_open(self, *args):
-        ManageHost(self)
+        manage_host = ManageHost(self)
+        manage_host.build_window()
         return True
 
     def menu_about(self, *args):
@@ -346,4 +353,5 @@ class GshellKeyBinder(object):
 if __name__ == '__main__':
     gshell = Gshell()
     gshell.build_window()
+    gshell.notebook.add_tab()
     gtk.main()

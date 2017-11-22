@@ -84,7 +84,6 @@ class GshellNoteBook(gtk.Notebook):
         if password:
             terminal.send_data(data=password, timeout=2000, reset=True)
         if host['start_commands']:
-            commands = []
             basetime = 3000
             for line in host['start_commands'].splitlines():
                 if line.startswith("##SUDO"):
