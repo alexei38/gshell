@@ -3,7 +3,7 @@
 import gtk
 
 PROGRAM_NAME = 'Gshell'
-VERSION = '0.0.1-44'
+VERSION = '$VERSION'
 AUTHOR = 'Alexei Margasov'
 COMMENT = 'Terminal emulator'
 WEBSITE = 'https://github.com/alexei38/gshell'
