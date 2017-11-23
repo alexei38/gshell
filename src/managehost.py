@@ -12,6 +12,7 @@ class ManageHost(gtk.Window):
         self.notebook = gshell.notebook
         self.config = gshell.config
         self.hosts_tree = GshellHostTree(gshell)
+        self.hosts_tree.entry.set_size_request(300, -1)
         self.hosts_tree.tree.connect('cursor-changed', self.on_cursor_changed)
 
     def on_exit(self, *args):
@@ -182,7 +183,7 @@ class GshellHostTree(gtk.VBox):
         hbox.pack_start(gtk.Label('Search: '), False, False, 5)
         self.entry = gtk.Entry()
         self.entry.connect('key-press-event', self.on_key_entry)
-        self.entry.set_size_request(250, -1)
+        self.entry.set_size_request(-1, -1)
         hbox.pack_start(self.entry, False, False, 0)
 
         """ Host List """
