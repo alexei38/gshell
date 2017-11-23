@@ -16,7 +16,7 @@ cp Gshell.desktop build/
 find build -iname '*.pyc' -delete
 version=$(git describe | grep -E -o "^[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}-[[:digit:]]{1,}")
 
-sed -i "s/\$VERSION/$version/" src/about.py
+sed -i "s/^VERSION.*/VERSION = '$version'/" src/about.py
 cd build
 debchange --create --package gshell -v $version -D xenial --empty "Some bugs fixed"
 dpkg-buildpackage -S -rfakeroot
