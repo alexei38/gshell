@@ -21,4 +21,4 @@ sed -i "s/\$VERSION/$version/" src/about.py
 
 debchange --create --package gshell -v $version -D trusty --empty "Some bugs fixed"
 dpkg-buildpackage -S -rfakeroot
-#dput ppa:alexei38/gshell gshell\_$version\_source.changes
+dput ppa:alexei38/gshell ../gshell_$version\_source.changes
