@@ -14,11 +14,12 @@ cp -r src build/src
 cp gshell build/gshell
 cp Gshell.desktop build/
 find build -iname '*.pyc' -delete
-cd build
 version=$(git describe | grep -E -o "^[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}-[[:digit:]]{1,}")
 
 sed -i "s/\$VERSION/$version/" src/about.py
-
-debchange --create --package gshell -v $version -D trusty --empty "Some bugs fixed"
+cd build
+debchange --create --package gshell -v $version -D xenial --empty "Some bugs fixed"
 dpkg-buildpackage -S -rfakeroot
-dput ppa:alexei38/gshell ../gshell_$version\_source.changes
+cd ..
+git checkout -- src/about.py
+dput ppa:alexei38/gshell gshell_$version\_source.changes
