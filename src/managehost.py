@@ -9,6 +9,7 @@ class ManageHost(gtk.Window):
 
     def __init__(self, gshell, *args):
         gtk.Window.__init__(self, *args)
+        self.gshell = gshell
         self.notebook = gshell.notebook
         self.config = gshell.config
         self.hosts_tree = GshellHostTree(gshell)
@@ -44,6 +45,7 @@ class ManageHost(gtk.Window):
                 uniq_hosts.append(host)
                 self.config.remove_host(host)
                 gobject.timeout_add(50, self.hosts_tree.rebuild_host_store)
+                gobject.timeout_add(50, self.gshell.tree_hosts.rebuild_host_store)
         gobject.timeout_add(50, self.on_cursor_changed)
 
     def on_copy_host(self, *args):
@@ -298,7 +300,8 @@ class GshellHost(gtk.Dialog):
             self.host['start_commands'] = command_buffer.get_text(start_iter, end_iter, 0)
 
             self.config.save_host(self.host)
-            gobject.timeout_add(50, self.main_window.rebuild_host_store)
+            gobject.timeout_add(50, self.main_window.hosts_tree.rebuild_host_store)
+            gobject.timeout_add(50, self.main_window.gshell.tree_hosts.rebuild_host_store)
         self.window.destroy()
 
     def build_dialog(self):
