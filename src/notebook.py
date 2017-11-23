@@ -70,6 +70,11 @@ class GshellNoteBook(gtk.Notebook):
             argv += ['sshpass']
         else:
             command = 'ssh'
+        if password:
+            clipboard = gtk.clipboard_get()
+            clipboard.set_text(password)
+            clipboard.store()
+            argv += ['-p', password]
         argv += ['ssh']
         argv += ['-p', host['port']]
         if host['username']:
@@ -81,17 +86,11 @@ class GshellNoteBook(gtk.Notebook):
         if host['log']:
             terminal.logger.start_logger(host['log'])
         self.gshell.switch_toolbar_sensitive(terminal)
-        if password:
-            terminal.send_data(data=password, timeout=2000, reset=True)
         if host['start_commands']:
-            basetime = 3000
+            basetime = 2000
             for line in host['start_commands'].splitlines():
                 if line.startswith("##SUDO"):
                     terminal.send_data(data='sudo -i', timeout=basetime)
-                    if password:
-                        basetime += 500
-                        terminal.send_data(data=password, timeout=basetime)
-                        basetime += 500
                 else:
                     terminal.send_data(data=line, timeout=basetime)
                 basetime += 500

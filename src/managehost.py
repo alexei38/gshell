@@ -130,10 +130,12 @@ class ManageHost(gtk.Window):
 
 class GshellHostTree(gtk.VBox):
 
-    def __init__(self, gshell, *args):
+    def __init__(self, gshell, small=False, *args):
         gtk.VBox.__init__(self, *args)
         self.config = gshell.config
         self.notebook = gshell.notebook
+        self.gshell = gshell
+        self.small = small
         self.build_tree()
 
     def find_selected_hosts(self):
@@ -177,10 +179,14 @@ class GshellHostTree(gtk.VBox):
     def on_key_entry(self, *args):
         gobject.timeout_add(50, self.rebuild_host_store)
 
+    def on_selected_hosts(self, *args):
+        gobject.timeout_add(50, self.gshell.switch_toolbar_sensitive)
+
     def build_tree(self):
         hbox = gtk.HBox()
         self.pack_start(hbox, False, False, 5)
-        hbox.pack_start(gtk.Label('Search: '), False, False, 5)
+        if not self.small:
+            hbox.pack_start(gtk.Label('Search: '), False, False, 5)
         self.entry = gtk.Entry()
         self.entry.connect('key-press-event', self.on_key_entry)
         self.entry.set_size_request(-1, -1)
@@ -192,6 +198,7 @@ class GshellHostTree(gtk.VBox):
         self.tree = gtk.TreeView(tree_model)
 
         self.tree.connect('row-activated', self.on_connect)
+        self.tree.connect('button_press_event', self.on_selected_hosts)
 
         self.tree.set_rubber_banding(True)
         self.treeselection = self.tree.get_selection()

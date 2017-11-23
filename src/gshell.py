@@ -59,9 +59,9 @@ class Gshell(object):
         """
         self.notebook = GshellNoteBook(self)
 
-        tree_hosts = GshellHostTree(self)
+        self.tree_hosts = GshellHostTree(self, small=True)
         hpaned = gtk.HPaned()
-        hpaned.add(tree_hosts)
+        hpaned.add(self.tree_hosts)
         hpaned.add(self.notebook)
 
         self.vbox_main.pack_start(hpaned, True, True, 0)
@@ -96,6 +96,15 @@ class Gshell(object):
 
     def menuitem_response(self, widget, data=None):
         print 'Click menu %s' % widget
+
+    def menu_copy_password(self, *args):
+        hosts, host_groups = self.tree_hosts.find_selected_hosts()
+        if hosts:
+            password = self.config.decrypt_password(hosts[0])
+            if password:
+                clipboard = gtk.clipboard_get()
+                clipboard.set_text(password)
+                clipboard.store()
 
     def menu_broadcast(self, widget, action, *args):
         if action == 'enable' or action == 'disable':
@@ -262,6 +271,16 @@ class Gshell(object):
             self.toolbar.zoom_out_button.set_sensitive(False)
             self.toolbar.zoom_orig_button.set_sensitive(False)
             self.change_menu_sensitive(self.menu, ['Start', 'Stop'], False)
+        host_selected = False
+        hosts, host_groups = self.tree_hosts.find_selected_hosts()
+        if hosts:
+            password = self.config.decrypt_password(hosts[0])
+            if password:
+                host_selected = True
+        if host_selected:
+            self.toolbar.copy_password_button.set_sensitive(True)
+        else:
+            self.toolbar.copy_password_button.set_sensitive(False)
         self.switch_menu_sensitive(terminal)
 
     def switch_menu_sensitive(self, terminal=None, *args):

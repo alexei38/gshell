@@ -91,3 +91,10 @@ class GshellToolbar(gtk.Toolbar):
         self.insert(broadcast_button, -1)
 
         self.insert(gtk.SeparatorToolItem(), -1)
+
+        self.copy_password_button = gtk.ToolButton(gtk.STOCK_DND_MULTIPLE)
+        self.copy_password_button.set_tooltip(gtk.Tooltips(), "Copy password")
+        self.copy_password_button.connect('clicked', self.gshell.menu_copy_password, 'zoom_orig')
+        self.insert(self.copy_password_button, -1)
+
+        self.insert(gtk.SeparatorToolItem(), -1)
