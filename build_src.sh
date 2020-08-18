@@ -20,7 +20,7 @@ version=$(git describe | grep -E -o "^[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit
     sed -i "s/^VERSION.*/VERSION = '$version'/" build/src/about.py
 
 cd build
-debchange --create --package gshell -v $version -D xenial --empty "Some bugs fixed"
+debchange --create --package gshell -v $version -D focal --empty "Some bugs fixed"
 dpkg-buildpackage -S -rfakeroot
 cd ..
-#dput ppa:alexei38/gshell gshell_$version\_source.changes
+dput ppa:alexei38/gshell gshell_$version\_source.changes
